@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>チェーン格付け</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: sticky filter bar on top, tier rows as label block + wrapping chain chips, bottom sheet for the selected chain. */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --ink: #15202b;
+  --muted: #5b6874;
+  --line: #d5dce2;
+  --accent: #0d7a86;
+  --accent-ink: #ffffff;
+  --chip: #f5f7f9;
+  --tier-s: #ef4f55;
+  --tier-a: #f59a2e;
+  --tier-b: #f2cf3a;
+  --tier-c: #52b788;
+  --tier-d: #5b97e0;
+  --tier-ink: #15202b;
+  --font-display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f161c; --surface: #18222b; --ink: #e8eef3; --muted: #93a1ad; --line: #2b3844;
+    --accent: #3fc1cf; --accent-ink: #08242a; --chip: #202c36;
+    --tier-s: #ff6b70; --tier-a: #ffb04d; --tier-b: #f5d95a; --tier-c: #6fcf9f; --tier-d: #7eb0f2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f161c; --surface: #18222b; --ink: #e8eef3; --muted: #93a1ad; --line: #2b3844;
+  --accent: #3fc1cf; --accent-ink: #08242a; --chip: #202c36;
+  --tier-s: #ff6b70; --tier-a: #ffb04d; --tier-b: #f5d95a; --tier-c: #6fcf9f; --tier-d: #7eb0f2;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 140px;
+}
+.wrap { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(28px, 7vw, 44px); line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 60ch; }
+.controls { display: flex; flex-direction: column; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; }
+.field label { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+input[type="search"], input[type="text"] {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px; min-width: 0; width: 100%;
+}
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer;
+}
+.cat[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.tiers { display: flex; flex-direction: column; gap: 8px; }
+.tier { display: grid; grid-template-columns: 76px minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-height: 76px; }
+.tier-label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--c); color: var(--tier-ink); padding: 8px 4px; text-align: center; }
+.tier-label b { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1; }
+.tier-label span { font-size: 11px; font-weight: 700; line-height: 1.2; }
+.tier-body { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; align-content: flex-start; align-items: flex-start; min-width: 0; }
+.chip {
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer; text-align: left;
+}
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.chip small { color: var(--muted); font-size: 11px; margin-left: 6px; }
+.empty { color: var(--muted); font-size: 13px; padding: 4px 2px; }
+.foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; color: var(--muted); font-size: 13px; }
+.foot p { margin: 0; max-width: 60ch; }
+.ghost { font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.csv { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.csv h2 { margin: 0; font-size: 16px; }
+.csv p { margin: 0; color: var(--muted); font-size: 13px; max-width: 62ch; }
+.csv textarea { font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px; width: 100%; min-height: 110px; resize: vertical; }
+.csv textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.csv .row { align-items: center; }
+.csv .msg { font-size: 13px; color: var(--accent); min-height: 1.4em; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 2px solid var(--accent);
+  box-shadow: 0 -8px 24px rgba(0,0,0,.18);
+  padding-top: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.sheet-in { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.sheet-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.sheet h2 { margin: 0; font-size: 20px; line-height: 1.3; }
+.sheet .note { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tier-btns { display: flex; gap: 4px; }
+.tier-btns button { font-family: var(--font-display); font-size: 16px; width: 40px; height: 36px; border: 2px solid transparent; border-radius: 6px; background: var(--c); color: var(--tier-ink); cursor: pointer; opacity: .55; }
+.tier-btns button[aria-pressed="true"] { opacity: 1; border-color: var(--ink); }
+.go { display: inline-flex; align-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 700; text-decoration: none; border-radius: 6px; padding: 8px 14px; }
+@media (max-width: 480px) { .tier { grid-template-columns: 60px minmax(0, 1fr); } .tier-label b { font-size: 28px; } }
+@media (prefers-reduced-motion: no-preference) { .chip, .cat { transition: border-color .12s, box-shadow .12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>チェーン格付け</h1>
+    <p>日本でよく見かける飲食チェーンを5段階に分けました。ランクは私の目安です。タップして好きな段に動かせます。気になる店は、近くの店舗を地図で探せます。</p>
+  </header>
+
+  <section class="controls" aria-label="絞り込みと検索場所">
+    <div class="row">
+      <div class="field">
+        <label for="q">チェーン名で絞り込み</label>
+        <input id="q" type="search" placeholder="例: すき家" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="area">探す場所(空欄なら現在地まわり)</label>
+        <input id="area" type="text" placeholder="例: 渋谷駅、梅田、天神" autocomplete="off">
+      </div>
+    </div>
+    <div class="cats" id="cats" role="group" aria-label="ジャンル"></div>
+  </section>
+
+  <main class="tiers" id="tiers"></main>
+
+  <section class="csv" aria-label="CSVで引き継ぎ">
+    <h2>CSVで引き継ぐ</h2>
+    <p>今のランクをCSVにして保存すると、別の端末やブラウザでも同じ表を読み込めます。保存したCSVの中身を下の欄に貼り付けるか、ファイルを選んで読み込んでください。</p>
+    <textarea id="csvText" aria-label="CSVの内容" spellcheck="false" placeholder="チェーン,ランク&#10;吉野家,A"></textarea>
+    <div class="row">
+      <button class="ghost" id="csvMake" type="button">今のランクをCSVにする</button>
+      <button class="ghost" id="csvSave" type="button" hidden>ファイルに保存</button>
+      <button class="ghost" id="csvCopy" type="button">コピー</button>
+      <button class="ghost" id="csvLoad" type="button">この内容を読み込む</button>
+      <label class="ghost" for="csvFile" style="cursor:pointer">ファイルから読み込む</label>
+      <input id="csvFile" type="file" accept=".csv,text/csv,text/plain" hidden>
+    </div>
+    <div class="msg" id="csvMsg" role="status"></div>
+  </section>
+
+  <div class="foot">
+    <p>並べ替えはこの端末のブラウザにだけ保存されます。ほかの人の画面には反映されません。</p>
+    <button class="ghost" id="reset" type="button">ランクを初期状態に戻す</button>
+  </div>
+</div>
+
+<aside class="sheet" id="sheet" hidden aria-live="polite">
+  <div class="sheet-in">
+    <div class="sheet-top">
+      <div>
+        <h2 id="sName"></h2>
+        <p class="note" id="sNote"></p>
+      </div>
+      <button class="ghost" id="sClose" type="button">閉じる</button>
+    </div>
+    <div class="sheet-actions">
+      <div class="tier-btns" id="sTiers" role="group" aria-label="ランクを変更"></div>
+      <a class="go" id="sGo" href="#" target="_blank" rel="noopener noreferrer">近くの店を地図で探す</a>
+    </div>
+  </div>
+</aside>
+
+<script>
+const TIERS = [
+  { id: "S", label: "殿堂入り", c: "var(--tier-s)" },
+  { id: "A", label: "常連になる", c: "var(--tier-a)" },
+  { id: "B", label: "安定の選択", c: "var(--tier-b)" },
+  { id: "C", label: "ときどき", c: "var(--tier-c)" },
+  { id: "D", label: "また今度", c: "var(--tier-d)" }
+];
+
+const CHAINS = [
+  ["吉野家", "牛丼・定食", "A", "牛丼の基準になる味。朝定食も強い。"],
+  ["すき家", "牛丼・定食", "A", "メニューの幅が広く、深夜まで開いている店が多い。"],
+  ["松屋", "牛丼・定食", "A", "味噌汁が付き、定食の選択肢が多い。"],
+  ["なか卯", "牛丼・定食", "B", "親子丼とうどんが目当て。"],
+  ["やよい軒", "牛丼・定食", "A", "ごはんおかわり自由で、定食の満足度が高い。"],
+  ["大戸屋", "牛丼・定食", "B", "店内調理の定食。少し値は張る。"],
+  ["マクドナルド", "ハンバーガー", "S", "どの街にもあり、いつでも同じ味。"],
+  ["モスバーガー", "ハンバーガー", "A", "注文後に作る。テリヤキが定番。"],
+  ["ケンタッキー", "ハンバーガー", "A", "骨付きチキンはほかに代わりがない。"],
+  ["バーガーキング", "ハンバーガー", "B", "直火焼きのパティ。ボリューム重視の日に。"],
+  ["フレッシュネスバーガー", "ハンバーガー", "B", "落ち着いて食べられる。"],
+  ["ゼッテリア", "ハンバーガー", "C", "旧ロッテリア。エビバーガーが根強い。"],
+  ["サブウェイ", "ハンバーガー", "C", "野菜多めで選べるが、店舗は少なめ。"],
+  ["丸亀製麺", "麺・ラーメン", "S", "打ち立てのうどん。釜揚げと天ぷらの組み合わせが強い。"],
+  ["はなまるうどん", "麺・ラーメン", "B", "朝うどんと手頃な価格。"],
+  ["日高屋", "麺・ラーメン", "A", "中華そばとちょい飲みの両方に使える。"],
+  ["餃子の王将", "麺・ラーメン", "A", "餃子と炒飯の定番。"],
+  ["天下一品", "麺・ラーメン", "A", "こってりスープは好みが分かれる。"],
+  ["来来亭", "麺・ラーメン", "B", "背脂の醤油ラーメン。"],
+  ["リンガーハット", "麺・ラーメン", "B", "野菜たっぷりの長崎ちゃんぽん。"],
+  ["幸楽苑", "麺・ラーメン", "C", "手頃な価格。突き抜けた特徴は薄い。"],
+  ["サイゼリヤ", "ファミレス", "S", "価格を考えると別格。ミラノ風ドリアが代表。"],
+  ["ロイヤルホスト", "ファミレス", "A", "ゆっくり座れて料理の質も高い。"],
+  ["ガスト", "ファミレス", "B", "メニューが多く、割引クーポンも使いやすい。"],
+  ["デニーズ", "ファミレス", "B", "パンケーキなどの洋食が安定。"],
+  ["ココス", "ファミレス", "B", "ハンバーグとドリンクバーの組み合わせ。"],
+  ["バーミヤン", "ファミレス", "C", "中華の手軽な選択肢。"],
+  ["ジョナサン", "ファミレス", "C", "落ち着けるが、ほかと比べて目立たない。"],
+  ["ジョリーパスタ", "ファミレス", "C", "パスタ専門。"],
+  ["CoCo壱番屋", "カレー・その他", "S", "辛さとトッピングを選べる。外れが少ない。"],
+  ["ミスタードーナツ", "カレー・その他", "B", "ドーナツとポン・デ・リングは別枠の存在。"],
+  ["スシロー", "回転寿司", "S", "ネタの質とキャンペーンの勢い。"],
+  ["くら寿司", "回転寿司", "A", "サイドメニューとガチャの楽しさ。"],
+  ["はま寿司", "回転寿司", "A", "価格が安く、メニューが多い。"],
+  ["かっぱ寿司", "回転寿司", "C", "食べ放題など企画が先行しがち。"],
+  ["スターバックス", "カフェ", "A", "作業にも待ち合わせにも使える。季節の新作が楽しみ。"],
+  ["コメダ珈琲店", "カフェ", "A", "座り心地がよく、シロノワールで満足できる。"],
+  ["ドトール", "カフェ", "B", "さっと入れて値段が手頃。"],
+  ["タリーズ", "カフェ", "B", "落ち着いた店内で、ほどよく長居できる。"],
+  ["サンマルクカフェ", "カフェ", "C", "チョコクロが目当て。"],
+  ["牛角", "焼肉・居酒屋", "A", "食べ放題を含め、焼肉の入り口として無難。"],
+  ["焼肉きんぐ", "焼肉・居酒屋", "A", "食べ放題の品数が多い。"],
+  ["鳥貴族", "焼肉・居酒屋", "A", "焼き鳥が均一価格で、使いやすい。"],
+  ["串カツ田中", "焼肉・居酒屋", "B", "ソースの二度漬け禁止でおなじみ。"],
+  ["磯丸水産", "焼肉・居酒屋", "C", "浜焼きの雰囲気を楽しむ店。"],
+  ["庄や", "焼肉・居酒屋", "C", "宴会向けの定番。"]
+].map(([name, cat, tier, note]) => ({ name, cat, tier, note }));
+
+const CATS = ["すべて", ...Array.from(new Set(CHAINS.map(c => c.cat)))];
+const KEY = "chain-tier-overrides-v1";
+let overrides = {};
+try { overrides = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { overrides = {}; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(overrides)); } catch (e) {} }
+
+let cat = "すべて", query = "", selected = null;
+const tierOf = c => overrides[c.name] || c.tier;
+const $ = id => document.getElementById(id);
+
+function mapUrl(c) {
+  const area = $("area").value.trim();
+  const q = area ? `${area} ${c.name}` : `近くの${c.name}`;
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+
+function renderCats() {
+  const box = $("cats"); box.textContent = "";
+  CATS.forEach(name => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "cat"; b.textContent = name;
+    b.setAttribute("aria-pressed", String(name === cat));
+    b.onclick = () => { cat = name; renderCats(); renderTiers(); };
+    box.appendChild(b);
+  });
+}
+
+function renderTiers() {
+  const box = $("tiers"); box.textContent = "";
+  const q = query.trim().toLowerCase();
+  TIERS.forEach(t => {
+    const items = CHAINS.filter(c => tierOf(c) === t.id && (cat === "すべて" || c.cat === cat) && (!q || c.name.toLowerCase().includes(q)));
+    const row = document.createElement("section"); row.className = "tier";
+    const label = document.createElement("div"); label.className = "tier-label"; label.style.setProperty("--c", t.c);
+    const b = document.createElement("b"); b.textContent = t.id;
+    const s = document.createElement("span"); s.textContent = t.label;
+    label.append(b, s);
+    const body = document.createElement("div"); body.className = "tier-body";
+    if (!items.length) {
+      const e = document.createElement("span"); e.className = "empty"; e.textContent = "該当なし"; body.appendChild(e);
+    }
+    items.forEach(c => {
+      const chip = document.createElement("button"); chip.type = "button"; chip.className = "chip";
+      chip.textContent = c.name;
+      chip.setAttribute("aria-pressed", String(selected === c.name));
+      chip.onclick = () => { selected = c.name; renderTiers(); renderSheet(); };
+      body.appendChild(chip);
+    });
+    row.append(label, body); box.appendChild(row);
+  });
+}
+
+function renderSheet() {
+  const c = CHAINS.find(x => x.name === selected);
+  const sheet = $("sheet");
+  if (!c) { sheet.hidden = true; return; }
+  sheet.hidden = false;
+  $("sName").textContent = c.name;
+  $("sNote").textContent = c.cat + " ・ " + c.note;
+  $("sGo").href = mapUrl(c);
+  const box = $("sTiers"); box.textContent = "";
+  TIERS.forEach(t => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = t.id;
+    b.style.setProperty("--c", t.c); b.setAttribute("aria-label", t.id + "ランクにする");
+    b.setAttribute("aria-pressed", String(tierOf(c) === t.id));
+    b.onclick = () => {
+      if (t.id === c.tier) delete overrides[c.name]; else overrides[c.name] = t.id;
+      save(); renderTiers(); renderSheet();
+    };
+    box.appendChild(b);
+  });
+}
+
+$("q").addEventListener("input", e => { query = e.target.value; renderTiers(); });
+$("area").addEventListener("input", () => renderSheet());
+$("sClose").onclick = () => { selected = null; renderTiers(); renderSheet(); };
+$("reset").onclick = () => { overrides = {}; save(); renderTiers(); renderSheet(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && selected) $("sClose").click(); });
+
+// ---- CSV round trip ----
+function csvMsg(t) { $("csvMsg").textContent = t; }
+function buildCsv() {
+  return "チェーン,ランク\n" + CHAINS.map(c => c.name + "," + tierOf(c)).join("\n") + "\n";
+}
+function applyCsv(text) {
+  const byName = new Map(CHAINS.map(c => [c.name, c]));
+  const valid = new Set(TIERS.map(t => t.id));
+  const next = {}; let n = 0, skipped = 0;
+  text.replace(/^﻿/, "").split(/\r?\n/).forEach(line => {
+    const parts = line.split(",");
+    if (parts.length < 2) return;
+    const name = parts[0].trim().replace(/^"|"$/g, "");
+    const tier = parts[1].trim().replace(/^"|"$/g, "").toUpperCase();
+    const c = byName.get(name);
+    if (!c) { if (name && name !== "チェーン") skipped++; return; }
+    if (!valid.has(tier)) { skipped++; return; }
+    if (tier !== c.tier) next[name] = tier;
+    n++;
+  });
+  if (!n) { csvMsg("読み込める行がありませんでした。「チェーン,ランク」の形式か確認してください。"); return; }
+  overrides = next; save(); renderTiers(); renderSheet();
+  csvMsg(n + "件を読み込みました" + (skipped ? "(読み飛ばし " + skipped + "件)" : "") + "。");
+}
+$("csvMake").onclick = () => { $("csvText").value = buildCsv(); csvMsg("CSVを作りました。保存またはコピーしてください。"); };
+$("csvCopy").onclick = async () => {
+  if (!$("csvText").value) $("csvText").value = buildCsv();
+  const ta = $("csvText");
+  try { await navigator.clipboard.writeText(ta.value); csvMsg("コピーしました。"); }
+  catch (e) { ta.focus(); ta.select(); csvMsg("自動コピーできませんでした。選択済みなので、そのままコピーしてください。"); }
+};
+$("csvLoad").onclick = () => applyCsv($("csvText").value);
+$("csvFile").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { $("csvText").value = String(r.result); applyCsv(String(r.result)); };
+  r.onerror = () => csvMsg("ファイルを読めませんでした。");
+  r.readAsText(f); e.target.value = "";
+});
+(async () => {
+  let dl = null;
+  try { dl = await claude.use("downloads"); } catch (e) {}
+  if (!dl) return;
+  const b = $("csvSave"); b.hidden = false;
+  b.onclick = async () => {
+    const data = buildCsv(); $("csvText").value = data;
+    try { await dl.save({ filename: "chain-tier.csv", data: "﻿" + data }); csvMsg("保存しました。"); }
+    catch (e) { csvMsg(e && e.code === "declined" ? "保存をキャンセルしました。" : "保存できませんでした。上の欄のCSVをコピーしてください。"); }
+  };
+})();
+
+renderCats(); renderTiers(); renderSheet();
+</script>
+</html>
