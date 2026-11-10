@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>チェーン格付け</title>
+<meta name="theme-color" content="#f4f5f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14151a" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="icons/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,6 +42,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -120,6 +124,24 @@ textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
 .seg button:last-child { border-right: 0; }
 .seg button[aria-pressed="true"] { background: var(--tint); color: var(--p1); font-weight: 900; }
 .go { display: flex; align-items: center; justify-content: center; min-height: 52px; background: var(--p1); color: var(--on-p); border-radius: 16px; font-weight: 900; font-size: 16px; text-decoration: none; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.danger { color: var(--tc-S); }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.acts .btn { flex: 1 1 auto; }
+.hero-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.hbtn { background: rgba(255,255,255,.2); color: inherit; border: 0; border-radius: 12px; padding: 9px 14px; font-weight: 800; font-size: 13px; cursor: pointer; }
+.hbtn:disabled { opacity: .6; }
+select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; max-width: 100%; }
+.card input[type="text"] { background: var(--bg); border-color: var(--line); border-radius: 12px; padding: 9px 12px; flex: 1 1 180px; width: auto; }
+.shot { position: fixed; inset: 0; z-index: 40; background: #0b0c10; color: #ffffff; display: flex; flex-direction: column; gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+.shot-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.shot-bar .btn { color: #ffffff; border-color: rgba(255,255,255,.4); }
+.shot-bar .btn.fill { background: #ffffff; color: #0b0c10; }
+.shot-bar span { font-size: 12px; color: rgba(255,255,255,.75); }
+.shot-img { flex: 1; min-height: 0; display: grid; place-items: center; }
+.shot-img img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; cursor: pointer; }
+.shot.clean .shot-bar { display: none; }
 @media (max-width: 480px) { .hero .big { font-size: 32px; } .stat b { font-size: 18px; } }
 @media (prefers-reduced-motion: no-preference) { .item, .pill { transition: border-color .12s; } }
 </style>
@@ -131,7 +153,11 @@ textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
     <span class="lab">登録チェーン</span>
     <div class="big"><span id="total">0</span><small>チェーン</small></div>
     <div class="stats" id="stats"></div>
-    <span class="sub">ランクは目安です。タップして好きな段に動かせます。</span>
+    <span class="sub">ランクは目安です。タップして、ランクや順番を変えられます。</span>
+    <div class="hero-acts">
+      <button class="hbtn" id="shotOpen" type="button">1枚の画像にする</button>
+      <button class="hbtn" id="pick" type="button">今日の一軒を選ぶ</button>
+    </div>
   </section>
 
   <section class="search" aria-label="検索">
@@ -149,9 +175,21 @@ textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
 
   <main id="tiers"></main>
 
+  <section class="card" aria-label="チェーンを追加">
+    <h2>チェーンを追加</h2>
+    <p>一覧にない店を自分で足せます。追加した店は、タップして出る画面から削除できます。</p>
+    <div class="row">
+      <input id="nName" type="text" maxlength="30" placeholder="チェーン名" aria-label="チェーン名" autocomplete="off">
+      <select id="nCat" aria-label="ジャンル"></select>
+      <select id="nTier" aria-label="ランク"></select>
+      <button class="btn fill" id="nAdd" type="button">追加</button>
+    </div>
+    <div class="msg" id="nMsg" role="status"></div>
+  </section>
+
   <section class="card" aria-label="CSV">
     <h2>CSVで引き継ぐ</h2>
-    <p>今のランクをCSVにして保存すると、別の端末やブラウザでも同じ表を読み込めます。CSVの中身を下の欄に貼り付けるか、ファイルを選んでください。</p>
+    <p>今のランク、順番、非表示、追加したチェーンをCSVにして保存すると、別の端末やブラウザでも同じ表を読み込めます。CSVの中身を下の欄に貼り付けるか、ファイルを選んでください。</p>
     <textarea id="csvText" aria-label="CSVの内容" spellcheck="false" placeholder="チェーン,ランク&#10;吉野家,A"></textarea>
     <div class="row">
       <button class="btn fill" id="csvMake" type="button">今のランクをCSVにする</button>
@@ -165,8 +203,8 @@ textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
   </section>
 
   <div class="foot">
-    <span>並べ替えはこの端末のブラウザにだけ保存されます。</span>
-    <button class="btn" id="reset" type="button">ランクを初期状態に戻す</button>
+    <span>変更はこの端末のブラウザにだけ保存されます。</span>
+    <button class="btn" id="reset" type="button">すべて初期状態に戻す</button>
   </div>
 </div>
 
@@ -182,9 +220,24 @@ textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
     </div>
     <div class="seg" id="sTiers" role="group" aria-label="ランクを変更"></div>
     <a class="go" id="sGo" href="#" target="_blank" rel="noopener noreferrer">近くの店を地図で探す</a>
-    <button class="btn" id="sHide" type="button"></button>
+    <div class="acts">
+      <button class="btn" id="sUp" type="button">← 前へ</button>
+      <button class="btn" id="sDown" type="button">後ろへ →</button>
+      <button class="btn" id="sHide" type="button"></button>
+      <button class="btn danger" id="sDel" type="button" hidden>削除</button>
+    </div>
   </div>
 </aside>
+
+<div class="shot" id="shot" hidden>
+  <div class="shot-bar">
+    <button class="btn" id="shotClose" type="button">閉じる</button>
+    <button class="btn fill" id="shotSave" type="button">画像を保存</button>
+    <button class="btn" id="shotShare" type="button" hidden>共有</button>
+    <span id="shotMsg" role="status"></span>
+  </div>
+  <div class="shot-img"><img id="shotImg" alt="チェーン格付けの一覧画像"></div>
+</div>
 
 <script>
 const TIERS = [
@@ -250,23 +303,69 @@ const CHAINS = [
   ["庄や", "焼肉・居酒屋", "C", "宴会向けの定番。"]
 ].map(([name, cat, tier, note]) => ({ name, cat, tier, note }));
 
-const CATS = ["すべて", ...Array.from(new Set(CHAINS.map(c => c.cat)))];
-const HUES = [210, 0, 130, 28, 280, 335, 175, 48, 250];
-const dotOf = cat => { const i = Math.max(0, CATS.indexOf(cat) - 1); return `hsl(${HUES[i % HUES.length]} 85% 48%)`; };
-const KEY = "chain-tier-overrides-v1";
-let overrides = {};
-try { overrides = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { overrides = {}; }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(overrides)); } catch (e) {} }
-const HKEY = "chain-tier-hidden-v1";
-let hid = {};
-try { hid = JSON.parse(localStorage.getItem(HKEY) || "{}") || {}; } catch (e) { hid = {}; }
-function saveH() { try { localStorage.setItem(HKEY, JSON.stringify(hid)); } catch (e) {} }
-let showHidden = false;
-const hiddenCount = () => CHAINS.filter(c => hid[c.name]).length;
-
-let cat = "すべて", query = "", selected = null;
-const tierOf = c => overrides[c.name] || c.tier;
+const BASE_N = CHAINS.length;
+const TIER_IDS = TIERS.map(t => t.id);
 const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const KEY = "chain-tier-overrides-v1", HKEY = "chain-tier-hidden-v1", OKEY = "chain-tier-order-v1", CKEY = "chain-tier-custom-v1";
+const obj = v => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+const arr = v => Array.isArray(v) ? v : [];
+let overrides = obj(store.get(KEY, {})), hid = obj(store.get(HKEY, {})), order = arr(store.get(OKEY, [])), customs = arr(store.get(CKEY, []));
+let cat = "すべて", query = "", selected = null, showHidden = false, CATS = [];
+
+const cleanName = s => String(s == null ? "" : s).replace(/[,\r\n"]/g, " ").trim().slice(0, 30);
+function setCustoms(list) {
+  CHAINS.length = BASE_N;
+  const seen = new Set(CHAINS.map(c => c.name)); customs = [];
+  list.forEach(x => {
+    const name = cleanName(x && x.name), cat = cleanName(x && x.cat) || "その他";
+    const tier = TIER_IDS.includes(x && x.tier) ? x.tier : "B";
+    if (!name || seen.has(name)) return;
+    seen.add(name); customs.push({ name, cat, tier });
+    CHAINS.push({ name, cat, tier, note: "自分で追加したチェーン", custom: true });
+  });
+}
+function normOrder() {
+  const names = CHAINS.map(c => c.name), set = new Set(names);
+  order = order.filter((n, i) => set.has(n) && order.indexOf(n) === i);
+  const has = new Set(order);
+  names.forEach(n => { if (!has.has(n)) order.push(n); });
+}
+function refreshCats() {
+  CATS = ["すべて", ...Array.from(new Set(CHAINS.map(c => c.cat)))];
+  if (!CATS.includes(cat)) cat = "すべて";
+}
+function saveAll() { store.set(KEY, overrides); store.set(HKEY, hid); store.set(OKEY, order); store.set(CKEY, customs); }
+setCustoms(customs); normOrder(); refreshCats();
+
+const HUES = [210, 0, 130, 28, 280, 335, 175, 48, 250, 95, 310];
+const dotOf = c => { const i = Math.max(0, CATS.indexOf(c) - 1); return `hsl(${HUES[i % HUES.length]} 85% 48%)`; };
+const tierOf = c => overrides[c.name] || c.tier;
+const hiddenCount = () => CHAINS.filter(c => hid[c.name]).length;
+function ordered() {
+  const m = new Map(order.map((n, i) => [n, i]));
+  return CHAINS.slice().sort((a, b) => m.get(a.name) - m.get(b.name));
+}
+function listFor(tid, withHidden) {
+  const q = query.trim().toLowerCase();
+  return ordered().filter(c => tierOf(c) === tid && (cat === "すべて" || c.cat === cat) && (!q || c.name.toLowerCase().includes(q)) && (withHidden || !hid[c.name]));
+}
+function move(c, dir) {
+  const list = listFor(tierOf(c), showHidden), i = list.indexOf(c), o = list[i + dir];
+  if (i < 0 || !o) return;
+  const a = order.indexOf(c.name), b = order.indexOf(o.name);
+  order[a] = o.name; order[b] = c.name;
+  saveAll(); renderTiers(); renderSheet();
+}
+function setTier(c, tid) {
+  if (tierOf(c) === tid) return;
+  if (tid === c.tier) delete overrides[c.name]; else overrides[c.name] = tid;
+  order = order.filter(n => n !== c.name); order.push(c.name);
+  saveAll(); renderAll();
+}
 
 function mapUrl(c) {
   const area = $("area").value.trim();
@@ -293,23 +392,26 @@ function renderCats() {
     if (name !== "すべて") { const i = document.createElement("i"); b.style.setProperty("--dot", dotOf(name)); b.appendChild(i); }
     b.appendChild(document.createTextNode(name));
     b.setAttribute("aria-pressed", String(name === cat));
-    b.onclick = () => { cat = name; renderCats(); renderTiers(); };
+    b.onclick = () => { cat = name; renderCats(); renderTiers(); renderSheet(); };
     box.appendChild(b);
   });
   if (hiddenCount() > 0 || showHidden) {
     const h = document.createElement("button");
     h.type = "button"; h.className = "pill"; h.textContent = "非表示 " + hiddenCount() + "件を" + (showHidden ? "隠す" : "表示");
     h.setAttribute("aria-pressed", String(showHidden));
-    h.onclick = () => { showHidden = !showHidden; renderCats(); renderTiers(); };
+    h.onclick = () => { showHidden = !showHidden; renderCats(); renderTiers(); renderSheet(); };
     box.appendChild(h);
   }
+  const sel = $("nCat"), prev = sel.value; sel.textContent = "";
+  const opts = CATS.slice(1); if (!opts.includes("その他")) opts.push("その他");
+  opts.forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
+  if (opts.includes(prev)) sel.value = prev;
 }
 
 function renderTiers() {
   const box = $("tiers"); box.textContent = "";
-  const q = query.trim().toLowerCase();
   TIERS.forEach(t => {
-    const items = CHAINS.filter(c => tierOf(c) === t.id && (cat === "すべて" || c.cat === cat) && (!q || c.name.toLowerCase().includes(q)) && (showHidden || !hid[c.name]));
+    const items = listFor(t.id, showHidden);
     const sec = document.createElement("section");
     const head = document.createElement("div"); head.className = "tier-head"; head.style.setProperty("--tc", `var(--tc-${t.id})`);
     const ic = document.createElement("span"); ic.className = "tier-icon"; ic.textContent = t.id;
@@ -322,10 +424,11 @@ function renderTiers() {
       const g = document.createElement("div"); g.className = "grid";
       items.forEach(c => {
         const b = document.createElement("button"); b.type = "button"; b.className = "item" + (hid[c.name] ? " is-hidden" : "");
+        b.dataset.name = c.name;
         b.style.setProperty("--dot", dotOf(c.cat));
         const nm = document.createElement("span"); nm.className = "nm";
         const dot = document.createElement("i"); nm.append(dot, document.createTextNode(c.name));
-        const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = c.cat;
+        const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = c.cat + (c.custom ? " ・ 追加" : "");
         b.append(nm, tag);
         b.setAttribute("aria-pressed", String(selected === c.name));
         b.onclick = () => { selected = c.name; renderTiers(); renderSheet(); };
@@ -337,6 +440,7 @@ function renderTiers() {
   });
 }
 
+let delArmed = null;
 function renderSheet() {
   const c = CHAINS.find(x => x.name === selected);
   const sheet = $("sheet");
@@ -345,56 +449,103 @@ function renderSheet() {
   $("sName").textContent = c.name;
   $("sNote").textContent = c.cat + " ・ " + c.note;
   $("sGo").href = mapUrl(c);
+  const list = listFor(tierOf(c), showHidden), i = list.indexOf(c);
+  $("sUp").disabled = i <= 0; $("sDown").disabled = i < 0 || i >= list.length - 1;
+  $("sUp").onclick = () => move(c, -1); $("sDown").onclick = () => move(c, 1);
   const hb = $("sHide");
-  hb.textContent = hid[c.name] ? "一覧に表示を戻す" : "この店を非表示にする";
+  hb.textContent = hid[c.name] ? "表示に戻す" : "非表示にする";
   hb.onclick = () => {
     if (hid[c.name]) delete hid[c.name]; else { hid[c.name] = 1; if (!showHidden) selected = null; }
-    saveH(); renderCats(); renderAll();
+    saveAll(); renderCats(); renderAll();
+  };
+  const db = $("sDel"); db.hidden = !c.custom;
+  db.textContent = delArmed === c.name ? "もう一度押すと削除" : "削除";
+  db.onclick = () => {
+    if (delArmed !== c.name) { delArmed = c.name; renderSheet(); setTimeout(() => { if (delArmed === c.name) { delArmed = null; renderSheet(); } }, 3000); return; }
+    delArmed = null; delete overrides[c.name]; delete hid[c.name];
+    setCustoms(customs.filter(x => x.name !== c.name)); normOrder(); refreshCats(); selected = null;
+    saveAll(); renderCats(); renderAll();
   };
   const box = $("sTiers"); box.textContent = "";
   TIERS.forEach(t => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = t.id;
     b.setAttribute("aria-label", t.id + "ランクにする");
     b.setAttribute("aria-pressed", String(tierOf(c) === t.id));
-    b.onclick = () => {
-      if (t.id === c.tier) delete overrides[c.name]; else overrides[c.name] = t.id;
-      save(); renderAll();
-    };
+    b.onclick = () => setTier(c, t.id);
     box.appendChild(b);
   });
 }
 function renderAll() { renderHero(); renderTiers(); renderSheet(); }
 
-$("q").addEventListener("input", e => { query = e.target.value; renderTiers(); });
+$("q").addEventListener("input", e => { query = e.target.value; renderTiers(); renderSheet(); });
 $("area").addEventListener("input", () => renderSheet());
 $("sClose").onclick = () => { selected = null; renderTiers(); renderSheet(); };
-$("reset").onclick = () => { overrides = {}; hid = {}; showHidden = false; save(); saveH(); renderCats(); renderAll(); };
-document.addEventListener("keydown", e => { if (e.key === "Escape" && selected) $("sClose").click(); });
+let resetArmed = false;
+$("reset").onclick = () => {
+  const b = $("reset");
+  if (!resetArmed) { resetArmed = true; b.textContent = "もう一度押すと初期化"; setTimeout(() => { resetArmed = false; b.textContent = "すべて初期状態に戻す"; }, 3000); return; }
+  resetArmed = false; b.textContent = "すべて初期状態に戻す";
+  overrides = {}; hid = {}; order = []; showHidden = false; selected = null;
+  setCustoms([]); normOrder(); refreshCats(); saveAll(); renderCats(); renderAll();
+};
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("shot").hidden) $("shotClose").click(); else if (selected) $("sClose").click();
+});
+
+// ---- add your own chain ----
+TIERS.forEach(t => { const o = document.createElement("option"); o.value = t.id; o.textContent = t.id + "ランク"; $("nTier").appendChild(o); });
+$("nTier").value = "B";
+function addChain() {
+  const name = cleanName($("nName").value), msg = $("nMsg");
+  if (!name) { msg.textContent = "チェーン名を入力してください。"; return; }
+  if (CHAINS.some(c => c.name === name)) { msg.textContent = "「" + name + "」はすでにあります。"; return; }
+  setCustoms(customs.concat([{ name, cat: $("nCat").value, tier: $("nTier").value }]));
+  normOrder(); refreshCats(); saveAll();
+  $("nName").value = ""; msg.textContent = "「" + name + "」を追加しました。";
+  renderCats(); renderAll();
+}
+$("nAdd").onclick = addChain;
+$("nName").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) addChain(); });
+
+// ---- pick one for today ----
+$("pick").onclick = () => {
+  const w = { S: 5, A: 4, B: 3, C: 2, D: 1 };
+  const pool = CHAINS.filter(c => !hid[c.name] && (cat === "すべて" || c.cat === cat));
+  if (!pool.length) return;
+  let r = Math.random() * pool.reduce((s, c) => s + w[tierOf(c)], 0), hit = pool[0];
+  for (const c of pool) { r -= w[tierOf(c)]; if (r <= 0) { hit = c; break; } }
+  query = ""; $("q").value = ""; selected = hit.name; renderTiers(); renderSheet();
+  const el = Array.from(document.querySelectorAll(".item")).find(x => x.dataset.name === hit.name);
+  if (el) el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+};
 
 // ---- CSV round trip ----
 function csvMsg(t) { $("csvMsg").textContent = t; }
 function buildCsv() {
-  return "チェーン,ランク,非表示\n" + CHAINS.map(c => c.name + "," + tierOf(c) + (hid[c.name] ? ",1" : ",")).join("\n") + "\n";
+  return "チェーン,ランク,非表示,ジャンル\n" + ordered().map(c => [c.name, tierOf(c), hid[c.name] ? "1" : "", c.cat].join(",")).join("\n") + "\n";
 }
 function applyCsv(text) {
-  const byName = new Map(CHAINS.map(c => [c.name, c]));
-  const valid = new Set(TIERS.map(t => t.id));
-  const next = {}, nextHid = {}; let n = 0, skipped = 0;
+  const base = new Map(CHAINS.slice(0, BASE_N).map(c => [c.name, c]));
+  const next = {}, nextHid = {}, nextOrder = [], nextCustom = [], seen = new Set(); let n = 0, skipped = 0;
   text.replace(/^﻿/, "").split(/\r?\n/).forEach(line => {
     const parts = line.split(",");
     if (parts.length < 2) return;
-    const name = parts[0].trim().replace(/^"|"$/g, "");
-    const tier = parts[1].trim().replace(/^"|"$/g, "").toUpperCase();
-    const c = byName.get(name);
-    if (!c) { if (name && name !== "チェーン") skipped++; return; }
-    if (!valid.has(tier)) { skipped++; return; }
-    if (tier !== c.tier) next[name] = tier;
-    if ((parts[2] || "").trim() === "1") nextHid[name] = 1;
-    n++;
+    const name = cleanName(parts[0]);
+    const tier = cleanName(parts[1]).toUpperCase();
+    if (!name || name === "チェーン") return;
+    if (!TIER_IDS.includes(tier) || seen.has(name)) { skipped++; return; }
+    seen.add(name);
+    const c = base.get(name);
+    if (c) { if (tier !== c.tier) next[name] = tier; }
+    else nextCustom.push({ name, tier, cat: cleanName(parts[3]) || "その他" });
+    if (cleanName(parts[2]) === "1") nextHid[name] = 1;
+    nextOrder.push(name); n++;
   });
   if (!n) { csvMsg("読み込める行がありませんでした。「チェーン,ランク」の形式か確認してください。"); return; }
-  overrides = next; hid = nextHid; save(); saveH(); renderCats(); renderAll();
-  csvMsg(n + "件を読み込みました" + (skipped ? "(読み飛ばし " + skipped + "件)" : "") + "。");
+  overrides = next; hid = nextHid; setCustoms(nextCustom); order = nextOrder; normOrder(); refreshCats(); selected = null;
+  saveAll(); renderCats(); renderAll();
+  csvMsg(n + "件を読み込みました" + (nextCustom.length ? "(追加チェーン " + customs.length + "件を含む)" : "") + (skipped ? "(読み飛ばし " + skipped + "件)" : "") + "。");
 }
 $("csvMake").onclick = () => { $("csvText").value = buildCsv(); csvMsg("CSVを作りました。保存またはコピーしてください。"); };
 $("csvCopy").onclick = async () => {
@@ -411,17 +562,99 @@ $("csvFile").addEventListener("change", e => {
   r.onerror = () => csvMsg("ファイルを読めませんでした。");
   r.readAsText(f); e.target.value = "";
 });
-(async () => {
-  let dl = null;
-  try { dl = await claude.use("downloads"); } catch (e) {}
-  if (!dl) return;
+
+// ---- saving files: the artifact viewer's save prompt, or a normal download on the web ----
+const inViewer = typeof claude !== "undefined";
+const dlP = (async () => { try { return await claude.use("downloads"); } catch (e) { return null; } })();
+function webDownload(blob, filename) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+async function saveFile(blob, filename, say) {
+  const dl = await dlP;
+  if (dl) {
+    try { await dl.save({ filename, data: blob }); say("保存しました。"); }
+    catch (e) { say(e && e.code === "declined" ? "保存をキャンセルしました。" : "保存できませんでした。"); }
+  } else if (!inViewer) { webDownload(blob, filename); say("保存しました。"); }
+  else say("この画面では保存できません。");
+}
+dlP.then(dl => {
+  if (!dl && inViewer) return;
   const b = $("csvSave"); b.hidden = false;
-  b.onclick = async () => {
-    const data = buildCsv(); $("csvText").value = data;
-    try { await dl.save({ filename: "chain-tier.csv", data: "﻿" + data }); csvMsg("保存しました。"); }
-    catch (e) { csvMsg(e && e.code === "declined" ? "保存をキャンセルしました。" : "保存できませんでした。上の欄のCSVをコピーしてください。"); }
-  };
-})();
+  b.onclick = () => { const data = buildCsv(); $("csvText").value = data; saveFile(new Blob(["﻿" + data], { type: "text/csv" }), "chain-tier.csv", csvMsg); };
+});
+
+// ---- whole tier list as one image, shown full screen ----
+let shotBlob = null;
+function rr(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+async function makeImage() {
+  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  const font = (w, s) => `${w} ${s}px "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif`;
+  const W = 1080, P = 36, LW = 140, IN = 16, GAP = 12, CH = 62, HEAD = 150;
+  const lists = TIERS.map(t => listFor(t.id, false));
+  const allText = "チェーン格付け件SABCD0123456789/ ・" + CATS.join("") + lists.flat().map(c => c.name).join("");
+  try { await Promise.all([document.fonts.load(font(900, 40), allText), document.fonts.load(font(700, 30), allText)]); } catch (e) {}
+  const m = document.createElement("canvas").getContext("2d"); m.font = font(700, 30);
+  const maxW = W - P * 2 - LW - IN * 2;
+  const rows = lists.map(list => {
+    let x = 0, y = 0; const chips = [];
+    list.forEach(c => {
+      const w = Math.min(maxW, Math.ceil(m.measureText(c.name).width) + 66);
+      if (x > 0 && x + w > maxW) { x = 0; y += CH + GAP; }
+      chips.push({ c, x, y, w }); x += w + GAP;
+    });
+    return { chips, h: Math.max(118, y + CH + IN * 2) };
+  });
+  const H = P + HEAD + 20 + rows.reduce((s, r) => s + r.h + 14, 0) + P - 14;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d");
+  g.fillStyle = v("--bg"); g.fillRect(0, 0, W, H);
+  const grad = g.createLinearGradient(P, P, W - P, P + HEAD); grad.addColorStop(0, v("--p1")); grad.addColorStop(1, v("--p2"));
+  rr(g, P, P, W - P * 2, HEAD, 32); g.fillStyle = grad; g.fill();
+  g.fillStyle = v("--on-p"); g.textBaseline = "middle";
+  g.font = font(900, 56); g.textAlign = "left"; g.fillText("チェーン格付け", P + 34, P + HEAD / 2 + 2);
+  const d = new Date(), stamp = d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+  g.font = font(700, 26); g.textAlign = "right";
+  g.fillText(cat === "すべて" ? lists.flat().length + "件" : cat + " ・ " + lists.flat().length + "件", W - P - 34, P + HEAD / 2 - 18);
+  g.globalAlpha = .85; g.fillText(stamp, W - P - 34, P + HEAD / 2 + 22); g.globalAlpha = 1;
+  let y = P + HEAD + 20;
+  rows.forEach((row, i) => {
+    const t = TIERS[i];
+    rr(g, P, y, W - P * 2, row.h, 26); g.fillStyle = v("--card"); g.fill();
+    g.save(); rr(g, P, y, W - P * 2, row.h, 26); g.clip();
+    g.fillStyle = v("--tc-" + t.id); g.fillRect(P, y, LW, row.h); g.restore();
+    g.fillStyle = v("--card"); g.font = font(900, 68); g.textAlign = "center"; g.fillText(t.id, P + LW / 2, y + row.h / 2 + 4);
+    const ox = P + LW + IN, oy = y + IN;
+    g.textAlign = "left"; g.font = font(700, 30);
+    if (!row.chips.length) { g.fillStyle = v("--muted"); g.font = font(700, 26); g.fillText("なし", ox + 8, y + row.h / 2); }
+    row.chips.forEach(ch => {
+      rr(g, ox + ch.x, oy + ch.y, ch.w, CH, 20); g.fillStyle = v("--bg"); g.fill();
+      g.beginPath(); g.arc(ox + ch.x + 26, oy + ch.y + CH / 2, 8, 0, Math.PI * 2); g.fillStyle = dotOf(ch.c.cat); g.fill();
+      g.fillStyle = v("--ink"); g.fillText(ch.c.name, ox + ch.x + 44, oy + ch.y + CH / 2 + 2, ch.w - 58);
+    });
+    y += row.h + 14;
+  });
+  return cv;
+}
+function shotMsg(t) { $("shotMsg").textContent = t; }
+$("shotOpen").onclick = async () => {
+  const b = $("shotOpen"); b.disabled = true;
+  try {
+    const cv = await makeImage();
+    shotBlob = await new Promise(res => cv.toBlob(res, "image/png"));
+    $("shotImg").src = cv.toDataURL("image/png");
+    const file = shotBlob && typeof File === "function" ? new File([shotBlob], "chain-tier.png", { type: "image/png" }) : null;
+    $("shotShare").hidden = !(file && !inViewer && navigator.canShare && navigator.canShare({ files: [file] }));
+    $("shotShare").onclick = () => navigator.share({ files: [file], title: "チェーン格付け" }).catch(() => {});
+    shotMsg("画像をタップするとボタンが消えます。"); $("shot").classList.remove("clean"); $("shot").hidden = false;
+  } finally { b.disabled = false; }
+};
+$("shotClose").onclick = () => { $("shot").hidden = true; };
+$("shotImg").onclick = () => $("shot").classList.toggle("clean");
+$("shotSave").onclick = () => { if (shotBlob) saveFile(shotBlob, "chain-tier.png", t => shotMsg(t === "この画面では保存できません。" ? "画像を長押しして保存してください。" : t)); };
 
 renderCats(); renderAll();
 </script>
