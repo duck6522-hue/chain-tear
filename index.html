@@ -124,6 +124,12 @@ textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
 .seg button:last-child { border-right: 0; }
 .seg button[aria-pressed="true"] { background: var(--tint); color: var(--p1); font-weight: 900; }
 .go { display: flex; align-items: center; justify-content: center; min-height: 52px; background: var(--p1); color: var(--on-p); border-radius: 16px; font-weight: 900; font-size: 16px; text-decoration: none; }
+.links { display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; }
+.links .go { font-size: 15px; padding: 0 8px; text-align: center; }
+.go.alt { background: transparent; color: var(--p1); border: 1px solid var(--line); }
+.sheet { max-height: 88vh; overflow-y: auto; }
+.sheet input[type="text"] { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+.item .memo { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .btn:disabled { opacity: .4; cursor: default; }
 .btn.danger { color: var(--tc-S); }
 .acts { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -157,6 +163,7 @@ select { font: inherit; color: var(--ink); background: var(--bg); border: 1px so
     <div class="hero-acts">
       <button class="hbtn" id="shotOpen" type="button">1枚の画像にする</button>
       <button class="hbtn" id="pick" type="button">今日の一軒を選ぶ</button>
+      <button class="hbtn" id="undo" type="button" disabled>元に戻す</button>
     </div>
   </section>
 
@@ -189,7 +196,7 @@ select { font: inherit; color: var(--ink); background: var(--bg); border: 1px so
 
   <section class="card" aria-label="CSV">
     <h2>CSVで引き継ぐ</h2>
-    <p>今のランク、順番、非表示、追加したチェーンをCSVにして保存すると、別の端末やブラウザでも同じ表を読み込めます。CSVの中身を下の欄に貼り付けるか、ファイルを選んでください。</p>
+    <p>今のランク、順番、非表示、メモ、追加したチェーンをCSVにして保存すると、別の端末やブラウザでも同じ表を読み込めます。CSVの中身を下の欄に貼り付けるか、ファイルを選んでください。</p>
     <textarea id="csvText" aria-label="CSVの内容" spellcheck="false" placeholder="チェーン,ランク&#10;吉野家,A"></textarea>
     <div class="row">
       <button class="btn fill" id="csvMake" type="button">今のランクをCSVにする</button>
@@ -218,8 +225,12 @@ select { font: inherit; color: var(--ink); background: var(--bg); border: 1px so
       </div>
       <button class="btn" id="sClose" type="button">閉じる</button>
     </div>
+    <input id="sMemo" type="text" maxlength="60" placeholder="メモ(好きなメニューなど)" aria-label="メモ" autocomplete="off">
     <div class="seg" id="sTiers" role="group" aria-label="ランクを変更"></div>
-    <a class="go" id="sGo" href="#" target="_blank" rel="noopener noreferrer">近くの店を地図で探す</a>
+    <div class="links">
+      <a class="go" id="sGo" href="#" target="_blank" rel="noopener noreferrer">近くの店を地図で探す</a>
+      <a class="go alt" id="sMenu" href="#" target="_blank" rel="noopener noreferrer">メニューを調べる</a>
+    </div>
     <div class="acts">
       <button class="btn" id="sUp" type="button">← 前へ</button>
       <button class="btn" id="sDown" type="button">後ろへ →</button>
@@ -249,12 +260,14 @@ const TIERS = [
 ];
 
 const CHAINS = [
-  ["吉野家", "牛丼・定食", "A", "牛丼の基準になる味。朝定食も強い。"],
-  ["すき家", "牛丼・定食", "A", "メニューの幅が広く、深夜まで開いている店が多い。"],
-  ["松屋", "牛丼・定食", "A", "味噌汁が付き、定食の選択肢が多い。"],
-  ["なか卯", "牛丼・定食", "B", "親子丼とうどんが目当て。"],
-  ["やよい軒", "牛丼・定食", "A", "ごはんおかわり自由で、定食の満足度が高い。"],
-  ["大戸屋", "牛丼・定食", "B", "店内調理の定食。少し値は張る。"],
+  ["吉野家", "丼・定食", "A", "牛丼の基準になる味。朝定食も強い。"],
+  ["すき家", "丼・定食", "A", "メニューの幅が広く、深夜まで開いている店が多い。"],
+  ["松屋", "丼・定食", "A", "味噌汁が付き、定食の選択肢が多い。"],
+  ["なか卯", "丼・定食", "B", "親子丼とうどんが目当て。"],
+  ["やよい軒", "丼・定食", "A", "ごはんおかわり自由で、定食の満足度が高い。"],
+  ["大戸屋", "丼・定食", "B", "店内調理の定食。少し値は張る。"],
+  ["てんや", "丼・定食", "B", "揚げたての天丼が手頃な値段で食べられる。"],
+  ["松のや", "丼・定食", "B", "とんかつ定食が安く、朝から開いている店も多い。"],
   ["マクドナルド", "ハンバーガー", "S", "どの街にもあり、いつでも同じ味。"],
   ["モスバーガー", "ハンバーガー", "A", "注文後に作る。テリヤキが定番。"],
   ["ケンタッキー", "ハンバーガー", "A", "骨付きチキンはほかに代わりがない。"],
@@ -310,12 +323,13 @@ const store = {
   get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
-const KEY = "chain-tier-overrides-v1", HKEY = "chain-tier-hidden-v1", OKEY = "chain-tier-order-v1", CKEY = "chain-tier-custom-v1";
+const KEY = "chain-tier-overrides-v1", HKEY = "chain-tier-hidden-v1", OKEY = "chain-tier-order-v1", CKEY = "chain-tier-custom-v1", MKEY = "chain-tier-memo-v1";
 const obj = v => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
 const arr = v => Array.isArray(v) ? v : [];
-let overrides = obj(store.get(KEY, {})), hid = obj(store.get(HKEY, {})), order = arr(store.get(OKEY, [])), customs = arr(store.get(CKEY, []));
+let overrides = obj(store.get(KEY, {})), hid = obj(store.get(HKEY, {})), order = arr(store.get(OKEY, [])), customs = arr(store.get(CKEY, [])), memos = obj(store.get(MKEY, {}));
 let cat = "すべて", query = "", selected = null, showHidden = false, CATS = [];
 
+const cleanText = s => String(s == null ? "" : s).replace(/[,\r\n"]/g, " ").trim().slice(0, 60);
 const cleanName = s => String(s == null ? "" : s).replace(/[,\r\n"]/g, " ").trim().slice(0, 30);
 function setCustoms(list) {
   CHAINS.length = BASE_N;
@@ -323,7 +337,13 @@ function setCustoms(list) {
   list.forEach(x => {
     const name = cleanName(x && x.name), cat = cleanName(x && x.cat) || "その他";
     const tier = TIER_IDS.includes(x && x.tier) ? x.tier : "B";
-    if (!name || seen.has(name)) return;
+    if (!name) return;
+    if (seen.has(name)) {
+      // A chain the person added earlier may later ship as a built-in: keep the rank they gave it.
+      const b = CHAINS.find(c => c.name === name);
+      if (b && !b.custom && !overrides[name] && b.tier !== tier) overrides[name] = tier;
+      return;
+    }
     seen.add(name); customs.push({ name, cat, tier });
     CHAINS.push({ name, cat, tier, note: "自分で追加したチェーン", custom: true });
   });
@@ -338,8 +358,22 @@ function refreshCats() {
   CATS = ["すべて", ...Array.from(new Set(CHAINS.map(c => c.cat)))];
   if (!CATS.includes(cat)) cat = "すべて";
 }
-function saveAll() { store.set(KEY, overrides); store.set(HKEY, hid); store.set(OKEY, order); store.set(CKEY, customs); }
+function saveAll() { store.set(KEY, overrides); store.set(HKEY, hid); store.set(OKEY, order); store.set(CKEY, customs); store.set(MKEY, memos); }
 setCustoms(customs); normOrder(); refreshCats();
+
+const undoStack = [];
+function snap() {
+  undoStack.push(JSON.stringify({ overrides, hid, order, customs, memos }));
+  if (undoStack.length > 30) undoStack.shift();
+  $("undo").disabled = false;
+}
+function undo() {
+  const last = undoStack.pop(); if (!last) return;
+  const v = JSON.parse(last);
+  overrides = v.overrides; hid = v.hid; memos = v.memos; setCustoms(v.customs); order = v.order; normOrder(); refreshCats();
+  if (!CHAINS.some(c => c.name === selected)) selected = null;
+  saveAll(); renderCats(); renderAll(); $("undo").disabled = !undoStack.length;
+}
 
 const HUES = [210, 0, 130, 28, 280, 335, 175, 48, 250, 95, 310];
 const dotOf = c => { const i = Math.max(0, CATS.indexOf(c) - 1); return `hsl(${HUES[i % HUES.length]} 85% 48%)`; };
@@ -356,12 +390,14 @@ function listFor(tid, withHidden) {
 function move(c, dir) {
   const list = listFor(tierOf(c), showHidden), i = list.indexOf(c), o = list[i + dir];
   if (i < 0 || !o) return;
+  snap();
   const a = order.indexOf(c.name), b = order.indexOf(o.name);
   order[a] = o.name; order[b] = c.name;
   saveAll(); renderTiers(); renderSheet();
 }
 function setTier(c, tid) {
   if (tierOf(c) === tid) return;
+  snap();
   if (tid === c.tier) delete overrides[c.name]; else overrides[c.name] = tid;
   order = order.filter(n => n !== c.name); order.push(c.name);
   saveAll(); renderAll();
@@ -430,6 +466,7 @@ function renderTiers() {
         const dot = document.createElement("i"); nm.append(dot, document.createTextNode(c.name));
         const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = c.cat + (c.custom ? " ・ 追加" : "");
         b.append(nm, tag);
+        if (memos[c.name]) { const me = document.createElement("span"); me.className = "memo"; me.textContent = memos[c.name]; b.appendChild(me); }
         b.setAttribute("aria-pressed", String(selected === c.name));
         b.onclick = () => { selected = c.name; renderTiers(); renderSheet(); };
         g.appendChild(b);
@@ -449,12 +486,17 @@ function renderSheet() {
   $("sName").textContent = c.name;
   $("sNote").textContent = c.cat + " ・ " + c.note;
   $("sGo").href = mapUrl(c);
+  $("sMenu").href = "https://www.google.com/search?q=" + encodeURIComponent(c.name + " メニュー");
+  const mi = $("sMemo");
+  if (mi.dataset.name !== c.name || document.activeElement !== mi) mi.value = memos[c.name] || "";
+  mi.dataset.name = c.name;
   const list = listFor(tierOf(c), showHidden), i = list.indexOf(c);
   $("sUp").disabled = i <= 0; $("sDown").disabled = i < 0 || i >= list.length - 1;
   $("sUp").onclick = () => move(c, -1); $("sDown").onclick = () => move(c, 1);
   const hb = $("sHide");
   hb.textContent = hid[c.name] ? "表示に戻す" : "非表示にする";
   hb.onclick = () => {
+    snap();
     if (hid[c.name]) delete hid[c.name]; else { hid[c.name] = 1; if (!showHidden) selected = null; }
     saveAll(); renderCats(); renderAll();
   };
@@ -462,7 +504,8 @@ function renderSheet() {
   db.textContent = delArmed === c.name ? "もう一度押すと削除" : "削除";
   db.onclick = () => {
     if (delArmed !== c.name) { delArmed = c.name; renderSheet(); setTimeout(() => { if (delArmed === c.name) { delArmed = null; renderSheet(); } }, 3000); return; }
-    delArmed = null; delete overrides[c.name]; delete hid[c.name];
+    snap();
+    delArmed = null; delete overrides[c.name]; delete hid[c.name]; delete memos[c.name];
     setCustoms(customs.filter(x => x.name !== c.name)); normOrder(); refreshCats(); selected = null;
     saveAll(); renderCats(); renderAll();
   };
@@ -485,13 +528,26 @@ $("reset").onclick = () => {
   const b = $("reset");
   if (!resetArmed) { resetArmed = true; b.textContent = "もう一度押すと初期化"; setTimeout(() => { resetArmed = false; b.textContent = "すべて初期状態に戻す"; }, 3000); return; }
   resetArmed = false; b.textContent = "すべて初期状態に戻す";
-  overrides = {}; hid = {}; order = []; showHidden = false; selected = null;
+  snap();
+  overrides = {}; hid = {}; memos = {}; order = []; showHidden = false; selected = null;
   setCustoms([]); normOrder(); refreshCats(); saveAll(); renderCats(); renderAll();
 };
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if (!$("shot").hidden) $("shotClose").click(); else if (selected) $("sClose").click();
 });
+
+// ---- memo per chain, undo ----
+let memoSnapFor = null;
+$("sMemo").addEventListener("input", e => {
+  const c = CHAINS.find(x => x.name === selected); if (!c) return;
+  if (memoSnapFor !== c.name) { snap(); memoSnapFor = c.name; }
+  const t = cleanText(e.target.value);
+  if (t) memos[c.name] = t; else delete memos[c.name];
+  store.set(MKEY, memos); renderTiers();
+});
+$("sMemo").addEventListener("blur", () => { memoSnapFor = null; });
+$("undo").onclick = undo;
 
 // ---- add your own chain ----
 TIERS.forEach(t => { const o = document.createElement("option"); o.value = t.id; o.textContent = t.id + "ランク"; $("nTier").appendChild(o); });
@@ -500,6 +556,7 @@ function addChain() {
   const name = cleanName($("nName").value), msg = $("nMsg");
   if (!name) { msg.textContent = "チェーン名を入力してください。"; return; }
   if (CHAINS.some(c => c.name === name)) { msg.textContent = "「" + name + "」はすでにあります。"; return; }
+  snap();
   setCustoms(customs.concat([{ name, cat: $("nCat").value, tier: $("nTier").value }]));
   normOrder(); refreshCats(); saveAll();
   $("nName").value = ""; msg.textContent = "「" + name + "」を追加しました。";
@@ -523,11 +580,11 @@ $("pick").onclick = () => {
 // ---- CSV round trip ----
 function csvMsg(t) { $("csvMsg").textContent = t; }
 function buildCsv() {
-  return "チェーン,ランク,非表示,ジャンル\n" + ordered().map(c => [c.name, tierOf(c), hid[c.name] ? "1" : "", c.cat].join(",")).join("\n") + "\n";
+  return "チェーン,ランク,非表示,ジャンル,メモ\n" + ordered().map(c => [c.name, tierOf(c), hid[c.name] ? "1" : "", c.cat, memos[c.name] || ""].join(",")).join("\n") + "\n";
 }
 function applyCsv(text) {
   const base = new Map(CHAINS.slice(0, BASE_N).map(c => [c.name, c]));
-  const next = {}, nextHid = {}, nextOrder = [], nextCustom = [], seen = new Set(); let n = 0, skipped = 0;
+  const next = {}, nextHid = {}, nextMemo = {}, nextOrder = [], nextCustom = [], seen = new Set(); let n = 0, skipped = 0;
   text.replace(/^﻿/, "").split(/\r?\n/).forEach(line => {
     const parts = line.split(",");
     if (parts.length < 2) return;
@@ -540,10 +597,12 @@ function applyCsv(text) {
     if (c) { if (tier !== c.tier) next[name] = tier; }
     else nextCustom.push({ name, tier, cat: cleanName(parts[3]) || "その他" });
     if (cleanName(parts[2]) === "1") nextHid[name] = 1;
+    if (cleanText(parts[4])) nextMemo[name] = cleanText(parts[4]);
     nextOrder.push(name); n++;
   });
   if (!n) { csvMsg("読み込める行がありませんでした。「チェーン,ランク」の形式か確認してください。"); return; }
-  overrides = next; hid = nextHid; setCustoms(nextCustom); order = nextOrder; normOrder(); refreshCats(); selected = null;
+  snap();
+  overrides = next; hid = nextHid; memos = nextMemo; setCustoms(nextCustom); order = nextOrder; normOrder(); refreshCats(); selected = null;
   saveAll(); renderCats(); renderAll();
   csvMsg(n + "件を読み込みました" + (nextCustom.length ? "(追加チェーン " + customs.length + "件を含む)" : "") + (skipped ? "(読み飛ばし " + skipped + "件)" : "") + "。");
 }
