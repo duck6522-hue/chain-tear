@@ -88,6 +88,7 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .item .nm { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; overflow-wrap: anywhere; }
 .item .nm i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
 .tag { align-self: flex-start; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 2px 8px; background: color-mix(in srgb, var(--dot) 20%, transparent); color: var(--ink); }
+.item.is-hidden { opacity: .55; border-style: dashed; }
 .item[aria-pressed="true"] { border: 2px solid var(--p1); padding: 11px 13px; }
 .none { color: var(--muted); font-weight: 700; padding: 6px 4px 2px; }
 
@@ -179,6 +180,7 @@ textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
     </div>
     <div class="seg" id="sTiers" role="group" aria-label="ランクを変更"></div>
     <a class="go" id="sGo" href="#" target="_blank" rel="noopener noreferrer">近くの店を地図で探す</a>
+    <button class="btn" id="sHide" type="button"></button>
   </div>
 </aside>
 
@@ -222,7 +224,13 @@ const CHAINS = [
   ["ジョナサン", "ファミレス", "C", "落ち着けるが、ほかと比べて目立たない。"],
   ["ジョリーパスタ", "ファミレス", "C", "パスタ専門。"],
   ["CoCo壱番屋", "カレー・その他", "S", "辛さとトッピングを選べる。外れが少ない。"],
-  ["ミスタードーナツ", "カレー・その他", "B", "ドーナツとポン・デ・リングは別枠の存在。"],
+  ["サーティワン", "アイス・スイーツ", "A", "31種類から選べる。ダブルが定番。"],
+  ["シャトレーゼ", "アイス・スイーツ", "A", "ケーキもアイスも価格が手頃。"],
+  ["ミスタードーナツ", "アイス・スイーツ", "B", "ドーナツとポン・デ・リングは別枠の存在。"],
+  ["不二家", "アイス・スイーツ", "B", "ペコちゃんのショートケーキが定番。"],
+  ["銀座コージーコーナー", "アイス・スイーツ", "B", "ケーキの種類が多く、手土産にも向く。"],
+  ["クリスピー・クリーム・ドーナツ", "アイス・スイーツ", "B", "ふわっと溶ける生地。行列が出ることもある。"],
+  ["コールド・ストーン", "アイス・スイーツ", "C", "好きな具を混ぜてもらうアイス。値段は高め。"],
   ["スシロー", "回転寿司", "S", "ネタの質とキャンペーンの勢い。"],
   ["くら寿司", "回転寿司", "A", "サイドメニューとガチャの楽しさ。"],
   ["はま寿司", "回転寿司", "A", "価格が安く、メニューが多い。"],
@@ -247,6 +255,12 @@ const KEY = "chain-tier-overrides-v1";
 let overrides = {};
 try { overrides = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { overrides = {}; }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(overrides)); } catch (e) {} }
+const HKEY = "chain-tier-hidden-v1";
+let hid = {};
+try { hid = JSON.parse(localStorage.getItem(HKEY) || "{}") || {}; } catch (e) { hid = {}; }
+function saveH() { try { localStorage.setItem(HKEY, JSON.stringify(hid)); } catch (e) {} }
+let showHidden = false;
+const hiddenCount = () => CHAINS.filter(c => hid[c.name]).length;
 
 let cat = "すべて", query = "", selected = null;
 const tierOf = c => overrides[c.name] || c.tier;
@@ -259,11 +273,11 @@ function mapUrl(c) {
 }
 
 function renderHero() {
-  $("total").textContent = CHAINS.length;
+  $("total").textContent = CHAINS.filter(c => !hid[c.name]).length;
   const box = $("stats"); box.textContent = "";
   TIERS.forEach(t => {
     const d = document.createElement("div"); d.className = "stat";
-    const b = document.createElement("b"); b.textContent = CHAINS.filter(c => tierOf(c) === t.id).length;
+    const b = document.createElement("b"); b.textContent = CHAINS.filter(c => tierOf(c) === t.id && !hid[c.name]).length;
     const s = document.createElement("span"); s.textContent = t.id + "ランク";
     d.append(b, s); box.appendChild(d);
   });
@@ -280,13 +294,20 @@ function renderCats() {
     b.onclick = () => { cat = name; renderCats(); renderTiers(); };
     box.appendChild(b);
   });
+  if (hiddenCount() > 0 || showHidden) {
+    const h = document.createElement("button");
+    h.type = "button"; h.className = "pill"; h.textContent = "非表示 " + hiddenCount() + "件を" + (showHidden ? "隠す" : "表示");
+    h.setAttribute("aria-pressed", String(showHidden));
+    h.onclick = () => { showHidden = !showHidden; renderCats(); renderTiers(); };
+    box.appendChild(h);
+  }
 }
 
 function renderTiers() {
   const box = $("tiers"); box.textContent = "";
   const q = query.trim().toLowerCase();
   TIERS.forEach(t => {
-    const items = CHAINS.filter(c => tierOf(c) === t.id && (cat === "すべて" || c.cat === cat) && (!q || c.name.toLowerCase().includes(q)));
+    const items = CHAINS.filter(c => tierOf(c) === t.id && (cat === "すべて" || c.cat === cat) && (!q || c.name.toLowerCase().includes(q)) && (showHidden || !hid[c.name]));
     const sec = document.createElement("section");
     const head = document.createElement("div"); head.className = "tier-head"; head.style.setProperty("--tc", `var(--tc-${t.id})`);
     const ic = document.createElement("span"); ic.className = "tier-icon"; ic.textContent = t.id;
@@ -298,7 +319,7 @@ function renderTiers() {
     } else {
       const g = document.createElement("div"); g.className = "grid";
       items.forEach(c => {
-        const b = document.createElement("button"); b.type = "button"; b.className = "item";
+        const b = document.createElement("button"); b.type = "button"; b.className = "item" + (hid[c.name] ? " is-hidden" : "");
         b.style.setProperty("--dot", dotOf(c.cat));
         const nm = document.createElement("span"); nm.className = "nm";
         const dot = document.createElement("i"); nm.append(dot, document.createTextNode(c.name));
@@ -322,6 +343,12 @@ function renderSheet() {
   $("sName").textContent = c.name;
   $("sNote").textContent = c.cat + " ・ " + c.note;
   $("sGo").href = mapUrl(c);
+  const hb = $("sHide");
+  hb.textContent = hid[c.name] ? "一覧に表示を戻す" : "この店を非表示にする";
+  hb.onclick = () => {
+    if (hid[c.name]) delete hid[c.name]; else { hid[c.name] = 1; if (!showHidden) selected = null; }
+    saveH(); renderCats(); renderAll();
+  };
   const box = $("sTiers"); box.textContent = "";
   TIERS.forEach(t => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = t.id;
@@ -339,18 +366,18 @@ function renderAll() { renderHero(); renderTiers(); renderSheet(); }
 $("q").addEventListener("input", e => { query = e.target.value; renderTiers(); });
 $("area").addEventListener("input", () => renderSheet());
 $("sClose").onclick = () => { selected = null; renderTiers(); renderSheet(); };
-$("reset").onclick = () => { overrides = {}; save(); renderAll(); };
+$("reset").onclick = () => { overrides = {}; hid = {}; showHidden = false; save(); saveH(); renderCats(); renderAll(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape" && selected) $("sClose").click(); });
 
 // ---- CSV round trip ----
 function csvMsg(t) { $("csvMsg").textContent = t; }
 function buildCsv() {
-  return "チェーン,ランク\n" + CHAINS.map(c => c.name + "," + tierOf(c)).join("\n") + "\n";
+  return "チェーン,ランク,非表示\n" + CHAINS.map(c => c.name + "," + tierOf(c) + (hid[c.name] ? ",1" : ",")).join("\n") + "\n";
 }
 function applyCsv(text) {
   const byName = new Map(CHAINS.map(c => [c.name, c]));
   const valid = new Set(TIERS.map(t => t.id));
-  const next = {}; let n = 0, skipped = 0;
+  const next = {}, nextHid = {}; let n = 0, skipped = 0;
   text.replace(/^﻿/, "").split(/\r?\n/).forEach(line => {
     const parts = line.split(",");
     if (parts.length < 2) return;
@@ -360,10 +387,11 @@ function applyCsv(text) {
     if (!c) { if (name && name !== "チェーン") skipped++; return; }
     if (!valid.has(tier)) { skipped++; return; }
     if (tier !== c.tier) next[name] = tier;
+    if ((parts[2] || "").trim() === "1") nextHid[name] = 1;
     n++;
   });
   if (!n) { csvMsg("読み込める行がありませんでした。「チェーン,ランク」の形式か確認してください。"); return; }
-  overrides = next; save(); renderAll();
+  overrides = next; hid = nextHid; save(); saveH(); renderCats(); renderAll();
   csvMsg(n + "件を読み込みました" + (skipped ? "(読み飛ばし " + skipped + "件)" : "") + "。");
 }
 $("csvMake").onclick = () => { $("csvText").value = buildCsv(); csvMsg("CSVを作りました。保存またはコピーしてください。"); };
