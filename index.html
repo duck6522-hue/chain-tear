@@ -13,31 +13,35 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
 <style>
-/* Layout: matches the subscription app (Flutter). Light grey ground, white rounded cards, gradient hero, stadium pills, w900 headings. */
+/* Layout: three views under a bottom nav (tier list / manage / settings). Light grey ground, white rounded cards, gradient hero, stadium pills, w900 headings. Theme colors come from a preset chosen in settings. */
 :root {
-  --bg: #f4f5f9;
-  --card: #ffffff;
-  --ink: #1b1b1f;
-  --muted: #5f6368;
-  --line: #dcdee6;
-  --p1: #0c7fe6;
-  --p2: #4a2df0;
-  --on-p: #ffffff;
-  --tint: rgba(12, 127, 230, .12);
+  --bg: #f4f5f9; --card: #ffffff; --field: #f4f5f9; --ink: #1b1b1f; --muted: #5f6368; --line: #dcdee6;
+  --p1: #00996b; --p2: #0090b0; --on-p: #ffffff;
+  --pf: color-mix(in srgb, var(--p1) 90%, #000000);
+  --pt: color-mix(in srgb, var(--p1) 76%, #000000);
+  --tint: color-mix(in srgb, var(--p1) 13%, transparent);
+  --danger: #c62828;
   --font: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
   --tc-S: #d32f2f; --tc-A: #e64a19; --tc-B: #b26a00; --tc-C: #2e7d32; --tc-D: #1565c0;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #14151a; --card: #1f2026; --ink: #e3e2e6; --muted: #c3c6cf; --line: #43474e;
-    --p1: #a2c9ff; --p2: #c2b4ff; --on-p: #0b1b33; --tint: rgba(162, 201, 255, .16);
+    --bg: #14151a; --card: #1f2026; --field: #2a2c34; --ink: #e3e2e6; --muted: #a9adb8; --line: #3a3d46;
+    --pf: color-mix(in srgb, var(--p1) 92%, #000000);
+    --pt: color-mix(in srgb, var(--p1) 48%, #ffffff);
+    --tint: color-mix(in srgb, var(--p1) 24%, transparent);
+    --danger: #ff8a80;
     --tc-S: #e57373; --tc-A: #ffb74d; --tc-B: #ffd54f; --tc-C: #81c784; --tc-D: #64b5f6;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #14151a; --card: #1f2026; --ink: #e3e2e6; --muted: #c3c6cf; --line: #43474e;
-  --p1: #a2c9ff; --p2: #c2b4ff; --on-p: #0b1b33; --tint: rgba(162, 201, 255, .16);
+  --bg: #14151a; --card: #1f2026; --field: #2a2c34; --ink: #e3e2e6; --muted: #a9adb8; --line: #3a3d46;
+  --pf: color-mix(in srgb, var(--p1) 92%, #000000);
+  --pt: color-mix(in srgb, var(--p1) 48%, #ffffff);
+  --tint: color-mix(in srgb, var(--p1) 24%, transparent);
+  --danger: #ff8a80;
   --tc-S: #e57373; --tc-A: #ffb74d; --tc-B: #ffd54f; --tc-C: #81c784; --tc-D: #64b5f6;
   color-scheme: dark;
 }
@@ -47,98 +51,125 @@ body {
   background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 20px 150px;
+  padding-block: 16px 96px;
 }
-.wrap { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.view { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 h1 { font-size: 24px; font-weight: 900; letter-spacing: -1px; margin: 0; }
-h2 { margin: 0; }
-button, input { font: inherit; color: inherit; }
-input:focus-visible, button:focus-visible, a:focus-visible, label:focus-within { outline: 3px solid var(--p1); outline-offset: 2px; }
+h2, h3, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+input:focus-visible, button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visible, label:focus-within { outline: 3px solid var(--pt); outline-offset: 2px; }
 
+/* hero */
 .hero {
-  background: linear-gradient(135deg, var(--p1), var(--p2)); color: var(--on-p); border-radius: 24px; padding: 22px;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--p1) 25%, transparent);
+  background: linear-gradient(rgba(0,0,0,.08), rgba(0,0,0,.08)), linear-gradient(135deg, var(--p1), var(--p2)); color: var(--on-p);
+  border-radius: 24px; padding: 18px; box-shadow: 0 6px 16px color-mix(in srgb, var(--p1) 25%, transparent);
   display: flex; flex-direction: column; gap: 12px;
 }
-.hero .lab { font-weight: 700; opacity: .85; }
-.hero .big { font-size: 38px; font-weight: 900; letter-spacing: -1px; line-height: 1.15; font-variant-numeric: tabular-nums; }
-.hero .big small { font-size: 16px; font-weight: 900; margin-left: 4px; letter-spacing: 0; }
-.hero .sub { font-size: 12px; opacity: .85; }
+.hero .lab { font-weight: 700; opacity: .9; font-size: 13px; }
+.hero .big { font-size: 34px; font-weight: 900; letter-spacing: -1px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.hero .big small { font-size: 15px; font-weight: 900; margin-left: 4px; letter-spacing: 0; }
 .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.stat { background: rgba(255,255,255,.16); border-radius: 14px; padding: 8px 6px; text-align: center; }
-.stat b { display: block; font-size: 20px; font-weight: 900; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.stat span { font-size: 11px; font-weight: 700; opacity: .85; }
-:root[data-theme="dark"] .stat, :root:not([data-theme="light"]) .stat { background: rgba(11,27,51,.16); }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .stat { background: rgba(255,255,255,.16); } }
-:root[data-theme="light"] .stat { background: rgba(255,255,255,.16); }
+.stat { background: rgba(255,255,255,.18); border: 0; border-radius: 14px; padding: 8px 4px; text-align: center; cursor: pointer; }
+.stat b { display: block; font-size: 19px; font-weight: 900; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 11px; font-weight: 700; opacity: .9; }
+.hero-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.hbtn { background: rgba(255,255,255,.2); border: 0; border-radius: 12px; padding: 9px 13px; font-weight: 800; font-size: 13px; cursor: pointer; }
+.hbtn:disabled { opacity: .5; cursor: default; }
+.hero button:focus-visible { outline-color: #ffffff; }
 
-.search { display: flex; flex-wrap: wrap; gap: 8px; }
-.field { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.field label { font-size: 12px; font-weight: 700; color: var(--muted); padding-left: 4px; }
+/* search + filters */
 input[type="search"], input[type="text"] { width: 100%; min-width: 0; background: var(--card); border: 1px solid transparent; border-radius: 16px; padding: 12px 16px; }
-input::placeholder { color: var(--muted); opacity: .7; }
-
-.pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+input::placeholder { color: var(--muted); opacity: .75; }
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--bg); margin: -6px -16px; padding: 8px 16px; }
+.pills { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .pills::-webkit-scrollbar { display: none; }
-.pill { flex: none; display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.pills.wrapped { flex-wrap: wrap; overflow: visible; }
+.pill { flex: none; display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .pill i { width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
-.pill[aria-pressed="true"] { background: var(--p1); color: var(--on-p); border-color: transparent; }
+.pill[aria-pressed="true"] { background: var(--pf); color: var(--on-p); border-color: transparent; }
 .pill[aria-pressed="true"] i { box-shadow: 0 0 0 1.5px var(--on-p); }
 
-.tier-head { display: flex; align-items: center; gap: 10px; padding: 14px 4px 6px; }
+/* tiers */
+#tiers section { scroll-margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
+.tier-head { display: flex; align-items: center; gap: 10px; padding: 12px 4px 6px; }
 .tier-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-weight: 900; font-size: 16px; color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, transparent); }
 .tier-head h2 { font-size: 16px; font-weight: 900; }
 .tier-head .n { font-size: 12px; font-weight: 700; color: var(--muted); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
-.item { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.item .nm { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; overflow-wrap: anywhere; }
-.item .nm i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
-.tag { align-self: flex-start; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 2px 8px; background: color-mix(in srgb, var(--dot) 20%, transparent); color: var(--ink); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 158px), 1fr)); gap: 8px; }
+.item { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.item .nm { display: flex; align-items: baseline; gap: 7px; font-weight: 800; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+.item .nm i { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--dot); transform: translateY(-1px); }
+.tag { align-self: flex-start; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 1px 8px; background: color-mix(in srgb, var(--dot) 20%, transparent); }
+.item .memo { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .item.is-hidden { opacity: .55; border-style: dashed; }
-.item[aria-pressed="true"] { border: 2px solid var(--p1); padding: 11px 13px; }
-.none { color: var(--muted); font-weight: 700; padding: 6px 4px 2px; }
+.item[aria-pressed="true"] { border: 2px solid var(--pf); padding: 9px 11px; }
+.none { color: var(--muted); font-weight: 700; padding: 4px 4px 2px; }
+.hint { font-size: 12px; color: var(--muted); }
 
-.card { background: var(--card); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.card h2 { font-size: 16px; font-weight: 900; }
-.card p { margin: 0; font-size: 12px; color: var(--muted); }
-textarea { font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 12px; width: 100%; min-height: 110px; resize: vertical; }
-textarea:focus-visible { outline: 3px solid var(--p1); outline-offset: 2px; }
+/* panels (manage / settings) */
+.panel { background: var(--card); border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.panel h2 { font-size: 15px; font-weight: 900; }
+.panel h3 { font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 4px; }
+.panel p { font-size: 12px; color: var(--muted); }
+.panel input[type="text"] { background: var(--field); border-color: var(--line); border-radius: 12px; padding: 9px 12px; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row > input[type="text"] { flex: 1 1 180px; width: auto; }
+select { background: var(--field); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; max-width: 100%; }
+textarea { font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace; color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 14px; padding: 12px; width: 100%; min-height: 110px; resize: vertical; }
 .btn { white-space: nowrap; background: transparent; border: 1px solid var(--line); border-radius: 12px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
-.btn.fill { background: var(--p1); color: var(--on-p); border-color: transparent; }
-.msg { font-size: 12px; font-weight: 700; color: var(--p1); min-height: 1.4em; }
-.foot { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+.btn.fill { background: var(--pf); color: var(--on-p); border-color: transparent; }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: .4; cursor: default; }
+.msg { font-size: 12px; font-weight: 700; color: var(--pt); min-height: 1.4em; }
+.lrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.lrow:first-child { border-top: 0; padding-top: 0; }
+.lrow div { flex: 1; min-width: 0; }
+.lrow b { display: block; font-weight: 800; overflow-wrap: anywhere; }
+.lrow small { font-size: 12px; color: var(--muted); }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.sw { width: 36px; height: 36px; padding: 0; border-radius: 50%; border: 2px solid var(--card); flex: none; cursor: pointer; }
+.sw[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 1px; }
+.status { display: flex; align-items: flex-start; gap: 10px; }
+.status .led { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; background: var(--tc-C); }
+.status.off .led { background: var(--tc-A); }
+.status b { display: block; font-weight: 800; }
+.status small { font-size: 12px; color: var(--muted); }
 
+/* bottom nav */
+.nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; justify-content: center; background: color-mix(in srgb, var(--card) 92%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.nav button { flex: 1; max-width: 160px; background: none; border: 0; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.nav button[aria-current="page"] { color: var(--pt); }
+.nav svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* detail sheet */
 .sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--card); border-radius: 28px 28px 0 0;
-  box-shadow: 0 -8px 28px rgba(0,0,0,.2);
+  box-shadow: 0 -8px 28px rgba(0,0,0,.2); max-height: 88vh; overflow-y: auto;
   padding: 12px max(20px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
 }
 .sheet-in { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
 .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 4px; }
 .sheet-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
 .sheet h2 { font-size: 20px; font-weight: 900; }
-.sheet .note { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.sheet .note { margin-top: 2px; font-size: 12px; color: var(--muted); }
+.sheet input[type="text"] { background: var(--field); border-radius: 12px; padding: 10px 12px; }
 .seg { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-.seg button { background: transparent; border: 0; border-right: 1px solid var(--line); padding: 10px 0; font-weight: 800; font-size: 14px; cursor: pointer; color: var(--ink); }
+.seg button { background: transparent; border: 0; border-right: 1px solid var(--line); padding: 10px 0; font-weight: 800; font-size: 14px; cursor: pointer; }
 .seg button:last-child { border-right: 0; }
-.seg button[aria-pressed="true"] { background: var(--tint); color: var(--p1); font-weight: 900; }
-.go { display: flex; align-items: center; justify-content: center; min-height: 52px; background: var(--p1); color: var(--on-p); border-radius: 16px; font-weight: 900; font-size: 16px; text-decoration: none; }
+.seg button[aria-pressed="true"] { background: var(--tint); color: var(--pt); font-weight: 900; }
 .links { display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; }
-.links .go { font-size: 15px; padding: 0 8px; text-align: center; }
-.go.alt { background: transparent; color: var(--p1); border: 1px solid var(--line); }
-.sheet { max-height: 88vh; overflow-y: auto; }
-.sheet input[type="text"] { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
-.item .memo { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-.btn:disabled { opacity: .4; cursor: default; }
-.btn.danger { color: var(--tc-S); }
+.go { display: flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 8px; text-align: center; background: var(--pf); color: var(--on-p); border-radius: 16px; font-weight: 900; font-size: 15px; text-decoration: none; }
+.go.alt { background: transparent; color: var(--pt); border: 1px solid var(--line); }
 .acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .acts .btn { flex: 1 1 auto; }
-.hero-acts { display: flex; flex-wrap: wrap; gap: 8px; }
-.hbtn { background: rgba(255,255,255,.2); color: inherit; border: 0; border-radius: 12px; padding: 9px 14px; font-weight: 800; font-size: 13px; cursor: pointer; }
-.hbtn:disabled { opacity: .6; }
-select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; max-width: 100%; }
-.card input[type="text"] { background: var(--bg); border-color: var(--line); border-radius: 12px; padding: 9px 12px; flex: 1 1 180px; width: auto; }
+
+/* toast */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 45; max-width: calc(100% - 32px); display: flex; align-items: center; gap: 12px; background: var(--ink); color: var(--bg); border-radius: 14px; padding: 10px 14px; font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.toast button { background: none; border: 0; color: inherit; font-weight: 900; text-decoration: underline; cursor: pointer; padding: 0; white-space: nowrap; }
+
+/* full-screen image */
 .shot { position: fixed; inset: 0; z-index: 40; background: #0b0c10; color: #ffffff; display: flex; flex-direction: column; gap: 8px;
   padding: calc(10px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
 .shot-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -148,74 +179,110 @@ select { font: inherit; color: var(--ink); background: var(--bg); border: 1px so
 .shot-img { flex: 1; min-height: 0; display: grid; place-items: center; }
 .shot-img img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; cursor: pointer; }
 .shot.clean .shot-bar { display: none; }
-@media (max-width: 480px) { .hero .big { font-size: 32px; } .stat b { font-size: 18px; } }
-@media (prefers-reduced-motion: no-preference) { .item, .pill { transition: border-color .12s; } }
+@media (prefers-reduced-motion: no-preference) { .item, .pill, .nav button { transition: border-color .12s, color .12s; } }
 </style>
 
 <div class="wrap">
-  <h1>チェーン格付け</h1>
+  <h1 id="title">チェーン格付け</h1>
 
-  <section class="hero" aria-label="集計">
-    <span class="lab">登録チェーン</span>
-    <div class="big"><span id="total">0</span><small>チェーン</small></div>
-    <div class="stats" id="stats"></div>
-    <span class="sub">ランクは目安です。タップして、ランクや順番を変えられます。</span>
-    <div class="hero-acts">
-      <button class="hbtn" id="shotOpen" type="button">1枚の画像にする</button>
-      <button class="hbtn" id="pick" type="button">今日の一軒を選ぶ</button>
-      <button class="hbtn" id="undo" type="button" disabled>元に戻す</button>
-    </div>
+  <section class="view" id="vTier">
+    <section class="hero" aria-label="集計">
+      <div>
+        <span class="lab">登録チェーン</span>
+        <div class="big"><span id="total">0</span><small>チェーン</small></div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="hero-acts">
+        <button class="hbtn" id="shotOpen" type="button">1枚の画像にする</button>
+        <button class="hbtn" id="pick" type="button">今日の一軒を選ぶ</button>
+        <button class="hbtn" id="undo" type="button" disabled>元に戻す</button>
+      </div>
+    </section>
+
+    <input id="q" type="search" placeholder="チェーン名で探す" aria-label="チェーン名で探す" autocomplete="off">
+    <div class="filters"><div class="pills" id="cats" role="group" aria-label="ジャンル"></div></div>
+
+    <main id="tiers"></main>
+    <p class="hint">ランクは目安です。カードをタップすると、ランク、順番、メモを変えられます。上の集計の数字を押すと、そのランクまで移動します。</p>
   </section>
 
-  <section class="search" aria-label="検索">
-    <div class="field">
-      <label for="q">チェーン名で探す</label>
-      <input id="q" type="search" placeholder="例: すき家" autocomplete="off">
-    </div>
-    <div class="field">
-      <label for="area">地図で探す場所(空欄なら現在地まわり)</label>
-      <input id="area" type="text" placeholder="例: 渋谷駅、梅田、天神" autocomplete="off">
-    </div>
+  <section class="view" id="vManage" hidden>
+    <section class="panel" aria-label="チェーンを追加">
+      <h2>チェーンを追加</h2>
+      <p>一覧にない店を自分で足せます。</p>
+      <div class="row">
+        <input id="nName" type="text" maxlength="30" placeholder="チェーン名" aria-label="チェーン名" autocomplete="off">
+        <select id="nCat" aria-label="ジャンル"></select>
+        <select id="nTier" aria-label="ランク"></select>
+        <button class="btn fill" id="nAdd" type="button">追加</button>
+      </div>
+      <div class="msg" id="nMsg" role="status"></div>
+      <h3>追加したチェーン</h3>
+      <div id="addedList"></div>
+    </section>
+
+    <section class="panel" aria-label="非表示のチェーン">
+      <h2>非表示のチェーン</h2>
+      <div id="hiddenList"></div>
+    </section>
+
+    <section class="panel" aria-label="CSV">
+      <h2>CSVで引き継ぐ</h2>
+      <p>今のランク、順番、非表示、メモ、追加したチェーンをCSVにして保存すると、別の端末やブラウザでも同じ表を読み込めます。CSVの中身を下の欄に貼り付けるか、ファイルを選んでください。</p>
+      <textarea id="csvText" aria-label="CSVの内容" spellcheck="false" placeholder="チェーン,ランク&#10;吉野家,A"></textarea>
+      <div class="row">
+        <button class="btn fill" id="csvMake" type="button">今の状態をCSVにする</button>
+        <button class="btn" id="csvSave" type="button" hidden>ファイルに保存</button>
+        <button class="btn" id="csvCopy" type="button">コピー</button>
+        <button class="btn" id="csvLoad" type="button">この内容を読み込む</button>
+        <label class="btn" for="csvFile" style="cursor:pointer">ファイルから読み込む</label>
+        <input id="csvFile" type="file" accept=".csv,text/csv,text/plain" hidden>
+      </div>
+      <div class="msg" id="csvMsg" role="status"></div>
+    </section>
   </section>
 
-  <div class="pills" id="cats" role="group" aria-label="ジャンル"></div>
+  <section class="view" id="vSettings" hidden>
+    <section class="panel" aria-label="見た目">
+      <h2>見た目</h2>
+      <h3>テーマカラー</h3>
+      <div class="swatches" id="swatches"></div>
+      <h3>明るさ</h3>
+      <div class="pills wrapped" id="modes" role="group" aria-label="明るさ"></div>
+    </section>
 
-  <main id="tiers"></main>
+    <section class="panel" aria-label="地図で探す場所">
+      <h2>地図で探す場所</h2>
+      <input id="area" type="text" maxlength="40" placeholder="例: 渋谷駅、梅田、天神" aria-label="地図で探す場所" autocomplete="off">
+      <p>「近くの店を地図で探す」で使う場所です。空欄なら現在地のまわりを探します。</p>
+    </section>
 
-  <section class="card" aria-label="チェーンを追加">
-    <h2>チェーンを追加</h2>
-    <p>一覧にない店を自分で足せます。追加した店は、タップして出る画面から削除できます。</p>
-    <div class="row">
-      <input id="nName" type="text" maxlength="30" placeholder="チェーン名" aria-label="チェーン名" autocomplete="off">
-      <select id="nCat" aria-label="ジャンル"></select>
-      <select id="nTier" aria-label="ランク"></select>
-      <button class="btn fill" id="nAdd" type="button">追加</button>
-    </div>
-    <div class="msg" id="nMsg" role="status"></div>
+    <section class="panel" aria-label="保存">
+      <h2>保存(メモリ)</h2>
+      <div class="status" id="saveStatus"><span class="led"></span><div><b id="saveHead"></b><small id="saveSub"></small></div></div>
+      <div class="row" id="persistRow" hidden>
+        <button class="btn" id="persistBtn" type="button">消えにくくする</button>
+        <span class="hint" id="persistMsg"></span>
+      </div>
+      <h3>自動バックアップ</h3>
+      <p>開くたびに、その時点の状態を7回分まで残します。まちがえて変えたときに、前の状態へ戻せます。</p>
+      <div id="backups"></div>
+      <h3>初期化</h3>
+      <div class="row">
+        <button class="btn danger" id="reset" type="button">すべて初期状態に戻す</button>
+        <span class="hint">初期化しても、上のバックアップから戻せます。</span>
+      </div>
+    </section>
   </section>
-
-  <section class="card" aria-label="CSV">
-    <h2>CSVで引き継ぐ</h2>
-    <p>今のランク、順番、非表示、メモ、追加したチェーンをCSVにして保存すると、別の端末やブラウザでも同じ表を読み込めます。CSVの中身を下の欄に貼り付けるか、ファイルを選んでください。</p>
-    <textarea id="csvText" aria-label="CSVの内容" spellcheck="false" placeholder="チェーン,ランク&#10;吉野家,A"></textarea>
-    <div class="row">
-      <button class="btn fill" id="csvMake" type="button">今のランクをCSVにする</button>
-      <button class="btn" id="csvSave" type="button" hidden>ファイルに保存</button>
-      <button class="btn" id="csvCopy" type="button">コピー</button>
-      <button class="btn" id="csvLoad" type="button">この内容を読み込む</button>
-      <label class="btn" for="csvFile" style="cursor:pointer">ファイルから読み込む</label>
-      <input id="csvFile" type="file" accept=".csv,text/csv,text/plain" hidden>
-    </div>
-    <div class="msg" id="csvMsg" role="status"></div>
-  </section>
-
-  <div class="foot">
-    <span>変更はこの端末のブラウザにだけ保存されます。</span>
-    <button class="btn" id="reset" type="button">すべて初期状態に戻す</button>
-  </div>
 </div>
 
-<aside class="sheet" id="sheet" hidden aria-live="polite">
+<nav class="nav" id="nav" aria-label="画面の切り替え">
+  <button type="button" data-view="tier"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="4" height="4" rx="1"/><path d="M11 6h10"/><rect x="3" y="10" width="4" height="4" rx="1"/><path d="M11 12h7"/><rect x="3" y="16" width="4" height="4" rx="1"/><path d="M11 18h4"/></svg>格付け</button>
+  <button type="button" data-view="manage"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg>管理</button>
+  <button type="button" data-view="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>設定</button>
+</nav>
+
+<aside class="sheet" id="sheet" hidden>
   <div class="sheet-in">
     <div class="grab"></div>
     <div class="sheet-top">
@@ -231,6 +298,7 @@ select { font: inherit; color: var(--ink); background: var(--bg); border: 1px so
       <a class="go" id="sGo" href="#" target="_blank" rel="noopener noreferrer">近くの店を地図で探す</a>
       <a class="go alt" id="sMenu" href="#" target="_blank" rel="noopener noreferrer">メニューを調べる</a>
     </div>
+    <p class="note" id="sArea"></p>
     <div class="acts">
       <button class="btn" id="sUp" type="button">← 前へ</button>
       <button class="btn" id="sDown" type="button">後ろへ →</button>
@@ -239,6 +307,8 @@ select { font: inherit; color: var(--ink); background: var(--bg); border: 1px so
     </div>
   </div>
 </aside>
+
+<div class="toast" id="toast" role="status" hidden><span id="toastText"></span><button type="button" id="toastUndo" hidden>元に戻す</button></div>
 
 <div class="shot" id="shot" hidden>
   <div class="shot-bar">
@@ -319,22 +389,30 @@ const CHAINS = [
 const BASE_N = CHAINS.length;
 const TIER_IDS = TIERS.map(t => t.id);
 const $ = id => document.getElementById(id);
+const root = document.documentElement;
+
+// ---- saved state (kept in this browser; survives page updates) ----
 const store = {
   get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 };
+const storageOk = (() => { try { localStorage.setItem("chain-tier-test", "1"); localStorage.removeItem("chain-tier-test"); return true; } catch (e) { return false; } })();
 const KEY = "chain-tier-overrides-v1", HKEY = "chain-tier-hidden-v1", OKEY = "chain-tier-order-v1", CKEY = "chain-tier-custom-v1", MKEY = "chain-tier-memo-v1";
+const SKEY = "chain-tier-settings-v1", BKEY = "chain-tier-backups-v1", TKEY = "chain-tier-saved-at-v1";
 const obj = v => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
 const arr = v => Array.isArray(v) ? v : [];
 let overrides = obj(store.get(KEY, {})), hid = obj(store.get(HKEY, {})), order = arr(store.get(OKEY, [])), customs = arr(store.get(CKEY, [])), memos = obj(store.get(MKEY, {}));
-let cat = "すべて", query = "", selected = null, showHidden = false, CATS = [];
+let settings = Object.assign({ preset: 0, mode: "auto", area: "" }, obj(store.get(SKEY, {})));
+let backups = arr(store.get(BKEY, [])).filter(b => b && typeof b.d === "string");
+let savedAt = Number(store.get(TKEY, 0)) || 0;
+let cat = "すべて", query = "", selected = null, showHidden = false, CATS = [], view = "tier";
 
 const cleanText = s => String(s == null ? "" : s).replace(/[,\r\n"]/g, " ").trim().slice(0, 60);
-const cleanName = s => String(s == null ? "" : s).replace(/[,\r\n"]/g, " ").trim().slice(0, 30);
+const cleanName = s => cleanText(s).slice(0, 30);
 function setCustoms(list) {
   CHAINS.length = BASE_N;
   const seen = new Set(CHAINS.map(c => c.name)); customs = [];
-  list.forEach(x => {
+  arr(list).forEach(x => {
     const name = cleanName(x && x.name), cat = cleanName(x && x.cat) || "その他";
     const tier = TIER_IDS.includes(x && x.tier) ? x.tier : "B";
     if (!name) return;
@@ -350,7 +428,7 @@ function setCustoms(list) {
 }
 function normOrder() {
   const names = CHAINS.map(c => c.name), set = new Set(names);
-  order = order.filter((n, i) => set.has(n) && order.indexOf(n) === i);
+  order = arr(order).filter((n, i, a) => set.has(n) && a.indexOf(n) === i);
   const has = new Set(order);
   names.forEach(n => { if (!has.has(n)) order.push(n); });
 }
@@ -358,27 +436,64 @@ function refreshCats() {
   CATS = ["すべて", ...Array.from(new Set(CHAINS.map(c => c.cat)))];
   if (!CATS.includes(cat)) cat = "すべて";
 }
-function saveAll() { store.set(KEY, overrides); store.set(HKEY, hid); store.set(OKEY, order); store.set(CKEY, customs); store.set(MKEY, memos); }
-setCustoms(customs); normOrder(); refreshCats();
+const stateStr = () => JSON.stringify({ overrides, hid, order, customs, memos });
+const isDefault = () => !Object.keys(overrides).length && !Object.keys(hid).length && !customs.length && !Object.keys(memos).length && order.every((n, i) => CHAINS[i] && CHAINS[i].name === n);
+function loadState(v) {
+  overrides = obj(v.overrides); hid = obj(v.hid); memos = obj(v.memos); setCustoms(v.customs); order = arr(v.order); normOrder(); refreshCats();
+  if (!CHAINS.some(c => c.name === selected)) selected = null;
+}
+function saveAll() {
+  store.set(KEY, overrides); store.set(HKEY, hid); store.set(OKEY, order); store.set(CKEY, customs); store.set(MKEY, memos);
+  savedAt = Date.now(); store.set(TKEY, savedAt);
+}
+// Automatic backups: the state as it stood at the start of each visit, and before any bulk change.
+function pushBackup() {
+  if (isDefault()) return;
+  const d = stateStr();
+  if (backups.length && backups[0].d === d) return;
+  backups.unshift({ t: savedAt || Date.now(), d }); backups = backups.slice(0, 7); store.set(BKEY, backups);
+}
+setCustoms(customs); normOrder(); refreshCats(); pushBackup();
 
 const undoStack = [];
-function snap() {
-  undoStack.push(JSON.stringify({ overrides, hid, order, customs, memos }));
-  if (undoStack.length > 30) undoStack.shift();
-  $("undo").disabled = false;
-}
+function snap() { undoStack.push(stateStr()); if (undoStack.length > 30) undoStack.shift(); $("undo").disabled = false; }
 function undo() {
   const last = undoStack.pop(); if (!last) return;
-  const v = JSON.parse(last);
-  overrides = v.overrides; hid = v.hid; memos = v.memos; setCustoms(v.customs); order = v.order; normOrder(); refreshCats();
-  if (!CHAINS.some(c => c.name === selected)) selected = null;
-  saveAll(); renderCats(); renderAll(); $("undo").disabled = !undoStack.length;
+  loadState(JSON.parse(last)); saveAll(); refresh(); $("undo").disabled = !undoStack.length;
+  toast("元に戻しました");
 }
+
+let toastTimer = null;
+function toast(text, withUndo) {
+  $("toastText").textContent = text; $("toastUndo").hidden = !withUndo; $("toast").hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; }, withUndo ? 5000 : 2200);
+}
+$("toastUndo").onclick = () => { $("toast").hidden = true; undo(); };
+
+// ---- theme: gradient presets and brightness, as in the other apps ----
+const THEMES = [
+  ["緑→シアン", "#00996b", "#0090b0"], ["青→藍", "#0c7fe6", "#4a2df0"], ["青→紫", "#2979ff", "#aa00ff"], ["シアン→青", "#0097b2", "#2962ff"],
+  ["青→ピンク", "#2f6bff", "#ff2d8a"], ["紫→ピンク", "#8e2de2", "#ff2d95"], ["ピンク→オレンジ", "#f0288a", "#f57600"], ["赤→マゼンタ", "#f01440", "#c800ea"]
+];
+const MODES = [["auto", "端末に合わせる"], ["light", "ライト"], ["dark", "ダーク"]];
+const hostTheme = root.getAttribute("data-theme"); let themeSetByUs = false;
+function applyTheme() {
+  const p = THEMES[settings.preset] || THEMES[0];
+  root.style.setProperty("--p1", p[1]); root.style.setProperty("--p2", p[2]);
+  if (settings.mode === "light" || settings.mode === "dark") { root.setAttribute("data-theme", settings.mode); themeSetByUs = true; }
+  else if (themeSetByUs) { if (hostTheme) root.setAttribute("data-theme", hostTheme); else root.removeAttribute("data-theme"); themeSetByUs = false; }
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
+    const dark = settings.mode === "dark" || (settings.mode !== "light" && /dark/.test(m.media));
+    m.content = dark ? "#14151a" : "#f4f5f9";
+  });
+}
+applyTheme();
 
 const HUES = [210, 0, 130, 28, 280, 335, 175, 48, 250, 95, 310];
 const dotOf = c => { const i = Math.max(0, CATS.indexOf(c) - 1); return `hsl(${HUES[i % HUES.length]} 85% 48%)`; };
 const tierOf = c => overrides[c.name] || c.tier;
 const hiddenCount = () => CHAINS.filter(c => hid[c.name]).length;
+const smooth = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 function ordered() {
   const m = new Map(order.map((n, i) => [n, i]));
   return CHAINS.slice().sort((a, b) => m.get(a.name) - m.get(b.name));
@@ -400,26 +515,39 @@ function setTier(c, tid) {
   snap();
   if (tid === c.tier) delete overrides[c.name]; else overrides[c.name] = tid;
   order = order.filter(n => n !== c.name); order.push(c.name);
-  saveAll(); renderAll();
+  saveAll(); renderHero(); renderTiers(); renderSheet();
 }
-
+function setHidden(c, on) {
+  snap();
+  if (on) { hid[c.name] = 1; if (!showHidden && selected === c.name) selected = null; } else delete hid[c.name];
+  saveAll(); refresh();
+  toast(on ? "「" + c.name + "」を非表示にしました" : "「" + c.name + "」を表示に戻しました", true);
+}
+function removeCustom(c) {
+  snap();
+  delete overrides[c.name]; delete hid[c.name]; delete memos[c.name];
+  setCustoms(customs.filter(x => x.name !== c.name)); normOrder(); refreshCats();
+  if (selected === c.name) selected = null;
+  saveAll(); refresh(); toast("「" + c.name + "」を削除しました", true);
+}
 function mapUrl(c) {
-  const area = $("area").value.trim();
-  const q = area ? `${area} ${c.name}` : `近くの${c.name}`;
-  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+  const area = cleanText(settings.area);
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(area ? `${area} ${c.name}` : `近くの${c.name}`);
 }
 
+// ---- tier list view ----
 function renderHero() {
   $("total").textContent = CHAINS.filter(c => !hid[c.name]).length;
   const box = $("stats"); box.textContent = "";
   TIERS.forEach(t => {
-    const d = document.createElement("div"); d.className = "stat";
+    const d = document.createElement("button"); d.type = "button"; d.className = "stat"; d.setAttribute("aria-label", t.id + "ランクへ移動");
     const b = document.createElement("b"); b.textContent = CHAINS.filter(c => tierOf(c) === t.id && !hid[c.name]).length;
     const s = document.createElement("span"); s.textContent = t.id + "ランク";
-    d.append(b, s); box.appendChild(d);
+    d.append(b, s);
+    d.onclick = () => { const sec = $("tier-" + t.id); if (sec) sec.scrollIntoView({ block: "start", behavior: smooth() }); };
+    box.appendChild(d);
   });
 }
-
 function renderCats() {
   const box = $("cats"); box.textContent = "";
   CATS.forEach(name => {
@@ -443,12 +571,11 @@ function renderCats() {
   opts.forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
   if (opts.includes(prev)) sel.value = prev;
 }
-
 function renderTiers() {
   const box = $("tiers"); box.textContent = "";
   TIERS.forEach(t => {
     const items = listFor(t.id, showHidden);
-    const sec = document.createElement("section");
+    const sec = document.createElement("section"); sec.id = "tier-" + t.id;
     const head = document.createElement("div"); head.className = "tier-head"; head.style.setProperty("--tc", `var(--tc-${t.id})`);
     const ic = document.createElement("span"); ic.className = "tier-icon"; ic.textContent = t.id;
     const h = document.createElement("h2"); h.textContent = t.label;
@@ -476,10 +603,8 @@ function renderTiers() {
     box.appendChild(sec);
   });
 }
-
-let delArmed = null;
 function renderSheet() {
-  const c = CHAINS.find(x => x.name === selected);
+  const c = view === "tier" ? CHAINS.find(x => x.name === selected) : null;
   const sheet = $("sheet");
   if (!c) { sheet.hidden = true; return; }
   sheet.hidden = false;
@@ -487,6 +612,7 @@ function renderSheet() {
   $("sNote").textContent = c.cat + " ・ " + c.note;
   $("sGo").href = mapUrl(c);
   $("sMenu").href = "https://www.google.com/search?q=" + encodeURIComponent(c.name + " メニュー");
+  $("sArea").textContent = "地図で探す場所: " + (cleanText(settings.area) || "現在地のまわり") + "(「設定」で変えられます)";
   const mi = $("sMemo");
   if (mi.dataset.name !== c.name || document.activeElement !== mi) mi.value = memos[c.name] || "";
   mi.dataset.name = c.name;
@@ -495,20 +621,8 @@ function renderSheet() {
   $("sUp").onclick = () => move(c, -1); $("sDown").onclick = () => move(c, 1);
   const hb = $("sHide");
   hb.textContent = hid[c.name] ? "表示に戻す" : "非表示にする";
-  hb.onclick = () => {
-    snap();
-    if (hid[c.name]) delete hid[c.name]; else { hid[c.name] = 1; if (!showHidden) selected = null; }
-    saveAll(); renderCats(); renderAll();
-  };
-  const db = $("sDel"); db.hidden = !c.custom;
-  db.textContent = delArmed === c.name ? "もう一度押すと削除" : "削除";
-  db.onclick = () => {
-    if (delArmed !== c.name) { delArmed = c.name; renderSheet(); setTimeout(() => { if (delArmed === c.name) { delArmed = null; renderSheet(); } }, 3000); return; }
-    snap();
-    delArmed = null; delete overrides[c.name]; delete hid[c.name]; delete memos[c.name];
-    setCustoms(customs.filter(x => x.name !== c.name)); normOrder(); refreshCats(); selected = null;
-    saveAll(); renderCats(); renderAll();
-  };
+  hb.onclick = () => setHidden(c, !hid[c.name]);
+  const db = $("sDel"); db.hidden = !c.custom; db.onclick = () => removeCustom(c);
   const box = $("sTiers"); box.textContent = "";
   TIERS.forEach(t => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = t.id;
@@ -518,38 +632,26 @@ function renderSheet() {
     box.appendChild(b);
   });
 }
-function renderAll() { renderHero(); renderTiers(); renderSheet(); }
 
-$("q").addEventListener("input", e => { query = e.target.value; renderTiers(); renderSheet(); });
-$("area").addEventListener("input", () => renderSheet());
-$("sClose").onclick = () => { selected = null; renderTiers(); renderSheet(); };
-let resetArmed = false;
-$("reset").onclick = () => {
-  const b = $("reset");
-  if (!resetArmed) { resetArmed = true; b.textContent = "もう一度押すと初期化"; setTimeout(() => { resetArmed = false; b.textContent = "すべて初期状態に戻す"; }, 3000); return; }
-  resetArmed = false; b.textContent = "すべて初期状態に戻す";
-  snap();
-  overrides = {}; hid = {}; memos = {}; order = []; showHidden = false; selected = null;
-  setCustoms([]); normOrder(); refreshCats(); saveAll(); renderCats(); renderAll();
-};
-document.addEventListener("keydown", e => {
-  if (e.key !== "Escape") return;
-  if (!$("shot").hidden) $("shotClose").click(); else if (selected) $("sClose").click();
-});
-
-// ---- memo per chain, undo ----
-let memoSnapFor = null;
-$("sMemo").addEventListener("input", e => {
-  const c = CHAINS.find(x => x.name === selected); if (!c) return;
-  if (memoSnapFor !== c.name) { snap(); memoSnapFor = c.name; }
-  const t = cleanText(e.target.value);
-  if (t) memos[c.name] = t; else delete memos[c.name];
-  store.set(MKEY, memos); renderTiers();
-});
-$("sMemo").addEventListener("blur", () => { memoSnapFor = null; });
-$("undo").onclick = undo;
-
-// ---- add your own chain ----
+// ---- manage view ----
+function lrow(title, sub, label, fn, danger) {
+  const r = document.createElement("div"); r.className = "lrow";
+  const d = document.createElement("div"), b = document.createElement("b"), s = document.createElement("small");
+  b.textContent = title; s.textContent = sub; d.append(b, s);
+  const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn" + (danger ? " danger" : ""); btn.textContent = label; btn.onclick = fn;
+  r.append(d, btn); return r;
+}
+function emptyLine(text) { const p = document.createElement("p"); p.textContent = text; return p; }
+function renderManage() {
+  const al = $("addedList"); al.textContent = "";
+  const added = CHAINS.filter(c => c.custom);
+  if (!added.length) al.appendChild(emptyLine("まだ追加したチェーンはありません。"));
+  added.forEach(c => al.appendChild(lrow(c.name, c.cat + " ・ " + tierOf(c) + "ランク", "削除", () => removeCustom(c), true)));
+  const hl = $("hiddenList"); hl.textContent = "";
+  const hidden = ordered().filter(c => hid[c.name]);
+  if (!hidden.length) hl.appendChild(emptyLine("非表示にした店はありません。格付けの画面で店をタップすると、非表示にできます。"));
+  hidden.forEach(c => hl.appendChild(lrow(c.name, c.cat + " ・ " + tierOf(c) + "ランク", "表示に戻す", () => setHidden(c, false))));
+}
 TIERS.forEach(t => { const o = document.createElement("option"); o.value = t.id; o.textContent = t.id + "ランク"; $("nTier").appendChild(o); });
 $("nTier").value = "B";
 function addChain() {
@@ -559,11 +661,91 @@ function addChain() {
   snap();
   setCustoms(customs.concat([{ name, cat: $("nCat").value, tier: $("nTier").value }]));
   normOrder(); refreshCats(); saveAll();
-  $("nName").value = ""; msg.textContent = "「" + name + "」を追加しました。";
-  renderCats(); renderAll();
+  $("nName").value = ""; msg.textContent = "";
+  refresh(); toast("「" + name + "」を追加しました", true);
 }
 $("nAdd").onclick = addChain;
 $("nName").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) addChain(); });
+
+// ---- settings view ----
+function renderLook() {
+  const sw = $("swatches"); sw.textContent = "";
+  THEMES.forEach((p, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "sw"; b.title = p[0]; b.setAttribute("aria-label", p[0]);
+    b.setAttribute("aria-pressed", String(i === settings.preset));
+    b.style.background = `linear-gradient(135deg, ${p[1]}, ${p[2]})`;
+    b.onclick = () => { settings.preset = i; store.set(SKEY, settings); applyTheme(); renderLook(); };
+    sw.appendChild(b);
+  });
+  const md = $("modes"); md.textContent = "";
+  MODES.forEach(([v, l]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "pill"; b.textContent = l;
+    b.setAttribute("aria-pressed", String(settings.mode === v));
+    b.onclick = () => { settings.mode = v; store.set(SKEY, settings); applyTheme(); renderLook(); };
+    md.appendChild(b);
+  });
+}
+const pad = n => String(n).padStart(2, "0");
+const stamp = t => { const d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate() + " " + d.getHours() + ":" + pad(d.getMinutes()); };
+function renderSave() {
+  const st = $("saveStatus");
+  st.classList.toggle("off", !storageOk);
+  if (!storageOk) { $("saveHead").textContent = "この画面では保存できません"; $("saveSub").textContent = "プライベートブラウズなどでは、閉じると変更が消えます。「管理」のCSVで書き出してください。"; }
+  else if (!savedAt) { $("saveHead").textContent = "まだ変更はありません"; $("saveSub").textContent = "変更すると、この端末のブラウザに自動で保存されます。"; }
+  else { $("saveHead").textContent = "この端末に保存済み"; $("saveSub").textContent = "最終保存 " + stamp(savedAt) + " ・ 変更するたびに自動で保存されます。ページが更新されても消えません。"; }
+  const box = $("backups"); box.textContent = "";
+  if (!backups.length) box.appendChild(emptyLine("まだバックアップはありません。"));
+  backups.forEach(bk => {
+    let v = {}; try { v = obj(JSON.parse(bk.d)); } catch (e) {}
+    const parts = [["ランク変更", Object.keys(obj(v.overrides)).length], ["非表示", Object.keys(obj(v.hid)).length], ["追加", arr(v.customs).length], ["メモ", Object.keys(obj(v.memos)).length]].filter(x => x[1]).map(x => x[0] + " " + x[1]);
+    box.appendChild(lrow(stamp(bk.t) + " の状態", parts.join(" ・ ") || "並び順のみ", "この状態に戻す", () => {
+      snap(); pushBackup(); loadState(v); saveAll(); refresh(); toast(stamp(bk.t) + " の状態に戻しました", true);
+    }));
+  });
+}
+$("area").value = settings.area || "";
+$("area").addEventListener("input", e => { settings.area = e.target.value.slice(0, 40); store.set(SKEY, settings); });
+let resetArmed = false;
+$("reset").onclick = () => {
+  const b = $("reset");
+  if (!resetArmed) { resetArmed = true; b.textContent = "もう一度押すと初期化"; setTimeout(() => { resetArmed = false; b.textContent = "すべて初期状態に戻す"; }, 3000); return; }
+  resetArmed = false; b.textContent = "すべて初期状態に戻す";
+  snap(); pushBackup();
+  showHidden = false; loadState({}); saveAll(); refresh(); toast("初期状態に戻しました", true);
+};
+
+function renderAll() { renderHero(); renderTiers(); renderSheet(); }
+function refresh() { renderCats(); renderAll(); renderManage(); renderSave(); }
+
+// ---- views ----
+const TITLES = { tier: "チェーン格付け", manage: "管理", settings: "設定" };
+function setView(v) {
+  view = v;
+  $("vTier").hidden = v !== "tier"; $("vManage").hidden = v !== "manage"; $("vSettings").hidden = v !== "settings";
+  $("title").textContent = TITLES[v];
+  for (const b of $("nav").children) { if (b.dataset.view === v) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); }
+  if (v !== "tier") selected = null;
+  if (v === "tier") renderTiers(); else if (v === "manage") renderManage(); else { renderLook(); renderSave(); }
+  renderSheet(); window.scrollTo(0, 0);
+}
+for (const b of $("nav").children) b.onclick = () => setView(b.dataset.view);
+
+$("q").addEventListener("input", e => { query = e.target.value; renderTiers(); renderSheet(); });
+$("sClose").onclick = () => { selected = null; renderTiers(); renderSheet(); };
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("shot").hidden) $("shotClose").click(); else if (selected) $("sClose").click();
+});
+let memoSnapFor = null;
+$("sMemo").addEventListener("input", e => {
+  const c = CHAINS.find(x => x.name === selected); if (!c) return;
+  if (memoSnapFor !== c.name) { snap(); memoSnapFor = c.name; }
+  const t = cleanText(e.target.value);
+  if (t) memos[c.name] = t; else delete memos[c.name];
+  saveAll(); renderTiers();
+});
+$("sMemo").addEventListener("blur", () => { memoSnapFor = null; });
+$("undo").onclick = undo;
 
 // ---- pick one for today ----
 $("pick").onclick = () => {
@@ -574,7 +756,7 @@ $("pick").onclick = () => {
   for (const c of pool) { r -= w[tierOf(c)]; if (r <= 0) { hit = c; break; } }
   query = ""; $("q").value = ""; selected = hit.name; renderTiers(); renderSheet();
   const el = Array.from(document.querySelectorAll(".item")).find(x => x.dataset.name === hit.name);
-  if (el) el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  if (el) el.scrollIntoView({ block: "center", behavior: smooth() });
 };
 
 // ---- CSV round trip ----
@@ -601,10 +783,11 @@ function applyCsv(text) {
     nextOrder.push(name); n++;
   });
   if (!n) { csvMsg("読み込める行がありませんでした。「チェーン,ランク」の形式か確認してください。"); return; }
-  snap();
-  overrides = next; hid = nextHid; memos = nextMemo; setCustoms(nextCustom); order = nextOrder; normOrder(); refreshCats(); selected = null;
-  saveAll(); renderCats(); renderAll();
-  csvMsg(n + "件を読み込みました" + (nextCustom.length ? "(追加チェーン " + customs.length + "件を含む)" : "") + (skipped ? "(読み飛ばし " + skipped + "件)" : "") + "。");
+  snap(); pushBackup();
+  loadState({ overrides: next, hid: nextHid, memos: nextMemo, customs: nextCustom, order: nextOrder });
+  saveAll(); refresh();
+  csvMsg(n + "件を読み込みました" + (customs.length ? "(追加チェーン " + customs.length + "件を含む)" : "") + (skipped ? "(読み飛ばし " + skipped + "件)" : "") + "。");
+  toast("CSVを読み込みました", true);
 }
 $("csvMake").onclick = () => { $("csvText").value = buildCsv(); csvMsg("CSVを作りました。保存またはコピーしてください。"); };
 $("csvCopy").onclick = async () => {
@@ -643,6 +826,18 @@ dlP.then(dl => {
   b.onclick = () => { const data = buildCsv(); $("csvText").value = data; saveFile(new Blob(["﻿" + data], { type: "text/csv" }), "chain-tier.csv", csvMsg); };
 });
 
+// ---- ask the browser to keep the saved data (web only) ----
+(async () => {
+  if (inViewer || !storageOk || !navigator.storage || !navigator.storage.persist || !navigator.storage.persisted) return;
+  const row = $("persistRow"), btn = $("persistBtn"), msg = $("persistMsg");
+  const show = ok => { btn.hidden = ok; msg.textContent = ok ? "長期保存が有効です。ブラウザが自動で消しにくい状態になっています。" : "しばらく開かないと、ブラウザが保存データを消すことがあります。"; };
+  try { show(await navigator.storage.persisted()); row.hidden = false; } catch (e) { return; }
+  btn.onclick = async () => {
+    let ok = false; try { ok = await navigator.storage.persist(); } catch (e) {}
+    show(ok); if (!ok) msg.textContent = "このブラウザでは有効にできませんでした。ホーム画面に追加してから試すと、有効になりやすくなります。";
+  };
+})();
+
 // ---- whole tier list as one image, shown full screen ----
 let shotBlob = null;
 function rr(g, x, y, w, h, r) {
@@ -650,11 +845,11 @@ function rr(g, x, y, w, h, r) {
   g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
 }
 async function makeImage() {
-  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  const cs = getComputedStyle(root), v = n => cs.getPropertyValue(n).trim();
   const font = (w, s) => `${w} ${s}px "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif`;
   const W = 1080, P = 36, LW = 140, IN = 16, GAP = 12, CH = 62, HEAD = 150;
   const lists = TIERS.map(t => listFor(t.id, false));
-  const allText = "チェーン格付け件SABCD0123456789/ ・" + CATS.join("") + lists.flat().map(c => c.name).join("");
+  const allText = "チェーン格付け件SABCD0123456789/ ・なし" + CATS.join("") + lists.flat().map(c => c.name).join("");
   try { await Promise.all([document.fonts.load(font(900, 40), allText), document.fonts.load(font(700, 30), allText)]); } catch (e) {}
   const m = document.createElement("canvas").getContext("2d"); m.font = font(700, 30);
   const maxW = W - P * 2 - LW - IN * 2;
@@ -672,13 +867,13 @@ async function makeImage() {
   const g = cv.getContext("2d");
   g.fillStyle = v("--bg"); g.fillRect(0, 0, W, H);
   const grad = g.createLinearGradient(P, P, W - P, P + HEAD); grad.addColorStop(0, v("--p1")); grad.addColorStop(1, v("--p2"));
-  rr(g, P, P, W - P * 2, HEAD, 32); g.fillStyle = grad; g.fill();
-  g.fillStyle = v("--on-p"); g.textBaseline = "middle";
+  rr(g, P, P, W - P * 2, HEAD, 32); g.fillStyle = grad; g.fill(); g.fillStyle = "rgba(0,0,0,.08)"; g.fill();
+  g.fillStyle = "#ffffff"; g.textBaseline = "middle";
   g.font = font(900, 56); g.textAlign = "left"; g.fillText("チェーン格付け", P + 34, P + HEAD / 2 + 2);
-  const d = new Date(), stamp = d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+  const d = new Date(), day = d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
   g.font = font(700, 26); g.textAlign = "right";
   g.fillText(cat === "すべて" ? lists.flat().length + "件" : cat + " ・ " + lists.flat().length + "件", W - P - 34, P + HEAD / 2 - 18);
-  g.globalAlpha = .85; g.fillText(stamp, W - P - 34, P + HEAD / 2 + 22); g.globalAlpha = 1;
+  g.globalAlpha = .88; g.fillText(day, W - P - 34, P + HEAD / 2 + 22); g.globalAlpha = 1;
   let y = P + HEAD + 20;
   rows.forEach((row, i) => {
     const t = TIERS[i];
@@ -715,6 +910,9 @@ $("shotClose").onclick = () => { $("shot").hidden = true; };
 $("shotImg").onclick = () => $("shot").classList.toggle("clean");
 $("shotSave").onclick = () => { if (shotBlob) saveFile(shotBlob, "chain-tier.png", t => shotMsg(t === "この画面では保存できません。" ? "画像を長押しして保存してください。" : t)); };
 
-renderCats(); renderAll();
+// Offline support on the web version: network first, saved copy when offline.
+if (!inViewer && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+
+renderCats(); renderAll(); setView("tier");
 </script>
 </html>
